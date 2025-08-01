@@ -1,0 +1,86 @@
+            <section class="search-container">
+              <form action="/search" method="GET">
+                <input type="text" name="query" placeholder="Search for a movie..." value="<%= query || '' %>" required />
+                <button type="submit">Search</button>
+              </form>
+            </section>
+
+            <% if (followMessage) { %>
+              <p class="follow-msg"><%= followMessage %></p>
+            <% } %>
+
+            <% if ((movies || []).length > 0) { %>
+              <div class="grid-container">
+                <div class="results-grid">
+
+                  <%
+                    // Helper function to normalize a date to UTC midnight
+                    function toUtcMidnight(date) {
+                      return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+                    }
+                    const now = toUtcMidnight(new Date());
+
+                    movies.forEach(movie => {
+                      const streamingDate = movie.streamingDate ? new Date(movie.streamingDate) : null;
+                      const theatricalDate = movie.release_date ? new Date(movie.release_date) : null;
+
+                      const streamingDateMidnight = streamingDate ? toUtcMidnight(streamingDate) : null;
+                      const theatricalDateMidnight = theatricalDate ? toUtcMidnight(theatricalDate) : null;
+
+                      const daysSinceTheatrical = theatricalDateMidnight
+                        ? Math.floor((now - theatricalDateMidnight) / (1000 * 60 * 60 * 24))
+                        : null;
+
+                      const isTheatricalRecent = daysSinceTheatrical !== null && daysSinceTheatrical <= 21;
+
+                      // Only allow following if movie hasn't been released yet
+                      const canFollow = (streamingDateMidnight && streamingDateMidnight > now) || 
+                                      (theatricalDateMidnight && theatricalDateMidnight > now);
+
+                      let displayDate = 'Coming Soon';
+                      if (streamingDateMidnight) {
+                        displayDate = streamingDateMidnight.toISOString().split('T')[0];
+                      } else if (theatricalDateMidnight) {
+                        displayDate = theatricalDateMidnight.toISOString().split('T')[0] + ' (Theatrical)';
+                      }
+                  %>
+
+                    <div class="movie-card">
+                      <img
+                        src="<%= movie.poster_path ? 'https://image.tmdb.org/t/p/w300' + movie.poster_path : '/images/funny-fallback.png' %>"
+                        alt="<%= movie.title %>"
+                        class="<%= movie.poster_path ? 'movie-poster' : 'movie-poster fallback' %>"
+                      />
+                      <h3><%= movie.title %></h3>
+                      <p><%= displayDate %></p>
+
+                      <% if (user) { %>
+                        <% if (followedMovieIds.includes(Number(movie.id))) { %>
+                          <button
+                            class="unfollow-button"
+                            data-movie-id="<%= movie.id %>"
+                          >Unfollow</button>
+                        <% } else { %>
+                          <button
+                            class="follow-button"
+                            data-movie-id="<%= movie.id %>"
+                            data-title="<%= movie.title %>"
+                            data-release-date="<%= movie.release_date %>"
+                            data-poster-path="<%= movie.poster_path %>"
+                            <%= canFollow ? '' : 'disabled title="Cannot follow — no streaming date and theatrical release over 21 days ago"' %>
+                          >
+                            Follow
+                          </button>
+                        <% } %>
+                      <% } else { %>
+                        <p><a href="/auth/login?redirect=<%= encodeURIComponent('/search?query=' + query) %>">Login to follow</a></p>
+                      <% } %>
+                    </div>
+
+                  <% }); %>
+
+                </div>
+              </div>
+            <% } else if (query) { %>
+              <p style="text-align:center;">No results found for "<%= query %>".</p>
+            <% } %>

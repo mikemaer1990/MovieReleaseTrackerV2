@@ -1,0 +1,32 @@
+<!-- layout.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+  <body class="<%= page === 'search' ? 'search-page' : 'my-movies-page' %>">
+  <nav class="navbar">
+    <h1>🎬 Movie Release Tracker</h1>
+    <div>
+      <a href="/">Home</a>
+      <% if (isLoggedIn) { %>
+        <a href="/my-movies">My Movies</a>
+        <a href="/auth/logout">Logout</a>
+        <span class="username">
+          Welcome, <%= userName && userName.trim() !== '' ? userName : userEmail %>!
+        </span>
+      <% } else { %>
+        <a href="/auth/login">Login</a>
+      <% } %>
+    </div>
+  </nav>
+
+  <main>
+    <%- body %>
+  </main>
+<script src="/js/follow.js"></script>
+</body>
+</html>
