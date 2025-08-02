@@ -11,12 +11,16 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({
+  extended: true
+}));
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'supersecretkey', 
+  secret: process.env.SESSION_SECRET || 'supersecretkey',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false }  // true in production with HTTPS
+  cookie: {
+    secure: false
+  } // true in production with HTTPS
 }));
 
 // Set view engine and layout middleware
@@ -49,7 +53,9 @@ app.use('/check-releases', checkReleases);
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).render("404", { title: "404 - Not Found" });
+  res.status(404).render("404", {
+    title: "404 - Not Found"
+  });
 });
 
 app.listen(PORT, () => {

@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
       };
     });
 
-    console.log(dueReleases)
+    console.log(`Sending ${dueReleases.length} emails...`);
     // call your Brevo email sender here using dueReleases
     await Promise.all(dueReleases.map(async release => {
       if (!release.userEmail) return;
@@ -62,14 +62,13 @@ router.get('/', async (req, res) => {
 
       try {
         await sendEmail({ to: release.userEmail, subject, htmlContent });
-        console.log(`Email sent to ${release.userEmail} for ${release.title}`);
       } catch (err) {
         console.error(`Failed to send email to ${release.userEmail}:`, err.message);
       }
     }));
 
     
-    return res.json({ success: true, count: dueReleases.length });
+    return res.send('Done');
   } catch (err) {
     console.error('Release check error:', err);
     return res.status(500).send('Internal server error');

@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
-const { getStreamingReleaseDate } = require("../services/tmdb");
+const {
+  getStreamingReleaseDate
+} = require("../services/tmdb");
 const {
   getFollowedMoviesByUserId,
   followMovie,
@@ -37,8 +39,7 @@ router.get("/search", async (req, res) => {
 
   try {
     const response = await axios.get(
-      `https://api.themoviedb.org/3/search/movie`,
-      {
+      `https://api.themoviedb.org/3/search/movie`, {
         params: {
           api_key: process.env.TMDB_API_KEY,
           query: query,
@@ -103,10 +104,17 @@ router.get("/search", async (req, res) => {
 
 router.post("/follow", async (req, res) => {
   if (!req.session.userId) {
-    return res.status(401).json({ success: false, message: "Not logged in" });
+    return res.status(401).json({
+      success: false,
+      message: "Not logged in"
+    });
   }
 
-  const { movieId, title, posterPath } = req.body;
+  const {
+    movieId,
+    title,
+    posterPath
+  } = req.body;
 
   try {
     const releaseDate = await getStreamingReleaseDate(movieId);
@@ -127,66 +135,56 @@ router.post("/follow", async (req, res) => {
       UserID: req.session.userId,
     });
 
-    res.json({ success: true, message: `You are now following "${title}"` });
+    res.json({
+      success: true,
+      message: `You are now following "${title}"`
+    });
   } catch (error) {
     console.error("Error following movie:", error);
-    res.status(500).json({ success: false, message: "Failed to follow movie" });
+    res.status(500).json({
+      success: false,
+      message: "Failed to follow movie"
+    });
   }
 });
 
 // POST /unfollow
 router.post("/unfollow", async (req, res) => {
   if (!req.session.userId) {
-    return res.status(401).json({ success: false, message: "Not logged in" });
+    return res.status(401).json({
+      success: false,
+      message: "Not logged in"
+    });
   }
 
-  const { movieId } = req.body;
+  const {
+    movieId
+  } = req.body;
 
   try {
     const success = await unfollowMovie(req.session.userId, Number(movieId));
     if (success) {
-      res.json({ success: true, message: "Movie unfollowed successfully" });
+      res.json({
+        success: true,
+        message: "Movie unfollowed successfully"
+      });
     } else {
       res
         .status(404)
-        .json({ success: false, message: "Movie not found for this user" });
+        .json({
+          success: false,
+          message: "Movie not found for this user"
+        });
     }
   } catch (error) {
     console.error("Error unfollowing movie:", error);
     res
       .status(500)
-      .json({ success: false, message: "Failed to unfollow movie" });
+      .json({
+        success: false,
+        message: "Failed to unfollow movie"
+      });
   }
 });
-
-// router.get("/my-movies", async (req, res) => {
-//   if (!req.session.userId) {
-//     return res.redirect("/auth/login");
-//   }
-
-//   try {
-//     console.log("User Airtable Record ID:", req.session.userId);
-//     const followedMovies = await getFollowedMoviesByUserId(req.session.userId);
-
-//     // Map fields to simpler objects for the view
-//     const movies = followedMovies.map(record => ({
-//       id: record.fields.TMDB_ID,
-//       title: record.fields.Title,
-//       releaseDate: record.fields.ReleaseDate
-//     }));
-
-//     res.render("my-movies", {
-//       title: "My Movies",
-//       user: {
-//         id: req.session.userId,
-//         airtableRecordId: req.session.airtableRecordId
-//       },
-//       movies
-//     });
-//   } catch (error) {
-//     console.error("Error fetching followed movies:", error);
-//     res.status(500).send("Internal server error");
-//   }
-// });
 
 module.exports = router;
