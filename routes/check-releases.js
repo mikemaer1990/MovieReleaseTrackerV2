@@ -54,10 +54,20 @@ router.get('/', async (req, res) => {
 
       const subject = `🎬 "${release.title}" is out today!`;
       const htmlContent = `
-        <h2>It's release day!</h2>
-        <p><strong>${release.title}</strong> is officially out today: ${release.releaseDate}.</p>
-        ${release.posterPath ? `<img src="https://image.tmdb.org/t/p/w500${release.posterPath}" alt="${release.title}" style="max-width: 300px;" />` : ''}
-        <p>Thanks for using Movie Tracker. You’re receiving this because you followed this movie.</p>
+        <div style="font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 480px; margin: 0 auto; background: #fff; color: #333; padding: 24px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); text-align: center;">
+          <h1 style="font-size: 1.5rem; color: #0078d4; margin-bottom: 0.5rem;">🎬 It's Release Day!</h1>
+          <p style="font-size: 1rem; margin-bottom: 1rem;">
+            <strong>${release.title}</strong> is officially out today (${release.releaseDate})!
+          </p>
+          ${release.posterPath ? `
+            <img src="https://image.tmdb.org/t/p/w500${release.posterPath}"
+              alt="${release.title}"
+              style="width: 100%; max-width: 320px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1rem;" />
+          ` : ''}
+          <p style="font-size: 0.9rem; color: #666; margin-top: 1rem;">
+            You’re receiving this email because you followed <strong>${release.title}</strong> on Movie Tracker.
+          </p>
+        </div>
       `;
 
       try {
@@ -67,7 +77,6 @@ router.get('/', async (req, res) => {
       }
     }));
 
-    
     return res.send('Done');
   } catch (err) {
     console.error('Release check error:', err);

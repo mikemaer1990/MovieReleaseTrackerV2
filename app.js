@@ -35,18 +35,32 @@ app.use(express.static(path.join(__dirname, "public")));
 // Make session data available in all views
 app.use((req, res, next) => {
   res.locals.isLoggedIn = !!req.session.userId;
-  res.locals.userName = req.session.userName || null;
+
+  // Create a user object if logged in
+  if (req.session.userId) {
+    res.locals.user = {
+      name: req.session.userName || null,
+      email: req.session.userEmail || null,
+      id: req.session.userId,
+    };
+  } else {
+    res.locals.user = null;
+  }
+
   res.locals.page = '';
   next();
 });
 
+
 // Routes
 const indexRoutes = require("./routes/index");
+const searchResultsRouter = require("./routes/search-results");
 const authRoutes = require("./routes/auth");
 const myMoviesRouter = require("./routes/my-movies");
 const checkReleases = require('./routes/check-releases');
 
 app.use("/", indexRoutes);
+app.use("/", searchResultsRouter);
 app.use("/auth", authRoutes);
 app.use("/my-movies", myMoviesRouter);
 app.use('/check-releases', checkReleases);

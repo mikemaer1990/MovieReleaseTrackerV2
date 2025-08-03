@@ -6,27 +6,92 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><%= title %></title>
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
 </head>
-  <body class="<%= page === 'search' ? 'search-page' : 'my-movies-page' %>">
+<body class="<%= page === 'search' ? 'search-page' : 'my-movies-page' %>">
+
   <nav class="navbar">
-    <h1>🎬 Movie Release Tracker</h1>
-    <div>
-      <a href="/">Home</a>
+  <div class="nav-left">
+    <a href="/"><img src="/images/logo.png" alt="Logo" class="logo" /></a>
+  </div>
+
+  <div class="nav-right">
+    <form class="nav-search" action="/search" method="GET">
+      <span class="search-icon" aria-hidden="true">🔍</span>
+      <input type="text" name="query" placeholder="Search..." required />
+    </form>
+
+    <div class="nav-links">
+      <a href="/" class="<%= page === 'home' ? 'active' : '' %>">Home</a>
+      <a href="/upcoming" class="<%= page === 'upcoming' ? 'active' : '' %>">Upcoming</a>
+      <a href="/top" class="<%= page === 'top' ? 'active' : '' %>">Top Releases</a>
       <% if (isLoggedIn) { %>
-        <a href="/my-movies">My Movies</a>
-        <a href="/auth/logout">Logout</a>
-        <span class="username">
-          Welcome, <%= userName && userName.trim() !== '' ? userName : userEmail %>!
-        </span>
+        <div class="user-dropdown nav-user-dropdown">
+          <button class="user-toggle">
+            <% if (user) { %>
+              <%= user.name || user.email %> <span class="arrow">▼</span>
+            <% } %>
+
+          </button>
+          <div class="user-menu">
+            <a href="/my-movies">My Movies</a>
+            <a href="/profile">Profile</a>
+            <a href="/settings">Settings</a>
+            <a href="/auth/logout">Logout</a>
+          </div>
+        </div>
       <% } else { %>
         <a href="/auth/login">Login</a>
       <% } %>
+
     </div>
-  </nav>
+
+    <button class="hamburger" id="hamburgerBtn">☰</button>
+  </div>
+</nav>
+
 
   <main>
     <%- body %>
   </main>
-<script src="/js/follow.js"></script>
+
+  <script src="/js/follow.js"></script>
+  <script>
+    const hamburger = document.getElementById('hamburgerBtn');
+    const navLinks = document.querySelector('.nav-links');
+
+    hamburger.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent immediate close
+      navLinks.classList.toggle('show');
+    });
+
+    // Close nav menu if clicking outside
+    document.addEventListener('click', (e) => {
+      if (navLinks.classList.contains('show') && !navLinks.contains(e.target) && e.target !== hamburger) {
+        navLinks.classList.remove('show');
+      }
+    });
+  </script>
+
+  <script>
+  const userToggle = document.querySelector('.user-toggle');
+  const userDropdown = document.querySelector('.user-dropdown');
+
+  if (userToggle) {
+    userToggle.addEventListener('click', () => {
+      userDropdown.classList.toggle('show');
+    });
+
+    // Optional: close dropdown if clicked outside
+    document.addEventListener('click', (e) => {
+      if (!userDropdown.contains(e.target)) {
+        userDropdown.classList.remove('show');
+      }
+    });
+  }
+</script>
+
 </body>
 </html>
