@@ -1,3 +1,25 @@
-  <!-- views/404.ejs -->
-  <h1>404 - Page Not Found</h1>
-  <a href="/">Go Home</a>
+<!-- views/404.ejs -->
+<div class="error-page">
+  <div class="error-content">
+    <div class="error-code">404</div>
+    <h1>Page Not Found</h1>
+    <p>Sorry, the page you're looking for doesn't exist or has been moved.</p>
+    
+    <div class="error-actions">
+      <a href="/" class="btn-base btn-golden">Go Home</a>
+      <a href="/search" class="interactive-base">Search Movies</a>
+    </div>
+    
+    <div class="helpful-links">
+      <p>You might be looking for:</p>
+      <ul>
+        <li><a href="/">Latest Movies</a></li>
+        <li><a href="/upcoming">Upcoming Releases</a></li>
+        <li><a href="/top">Top Rated Movies</a></li>
+        <% if (isLoggedIn) { %>
+          <li><a href="/my-movies">My Movies</a></li>
+        <% } %>
+      </ul>
+    </div>
+  </div>
+</div>

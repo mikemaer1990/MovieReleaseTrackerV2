@@ -1,4 +1,3 @@
-<!-- layout.ejs -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,85 +12,50 @@
 <body class="<%= page === 'search' ? 'search-page' : 'my-movies-page' %>">
 
   <nav class="navbar">
-  <div class="nav-left">
-    <a href="/"><img src="/images/logo.png" alt="Logo" class="logo" /></a>
-  </div>
-
-  <div class="nav-right">
-    <form class="nav-search" action="/search" method="GET">
-      <span class="search-icon" aria-hidden="true">🔍</span>
-      <input type="text" name="query" placeholder="Search..." required />
-    </form>
-
-    <div class="nav-links">
-      <a href="/" class="<%= page === 'home' ? 'active' : '' %>">Home</a>
-      <a href="/upcoming" class="<%= page === 'upcoming' ? 'active' : '' %>">Upcoming</a>
-      <a href="/top" class="<%= page === 'top' ? 'active' : '' %>">Top Releases</a>
-      <% if (isLoggedIn) { %>
-        <div class="user-dropdown nav-user-dropdown">
-          <button class="user-toggle">
-            <% if (user) { %>
-              <%= user.name || user.email %> <span class="arrow">▼</span>
-            <% } %>
-
-          </button>
-          <div class="user-menu">
-            <a href="/my-movies">My Movies</a>
-            <a href="/profile">Profile</a>
-            <a href="/settings">Settings</a>
-            <a href="/auth/logout">Logout</a>
-          </div>
-        </div>
-      <% } else { %>
-        <a href="/auth/login">Login</a>
-      <% } %>
-
+    <div class="nav-left">
+      <a href="/"><img src="/images/logo.png" alt="Logo" class="logo" /></a>
     </div>
 
-    <button class="hamburger" id="hamburgerBtn">☰</button>
-  </div>
-</nav>
+    <div class="nav-right">
+      <form class="nav-search" action="/search" method="GET">
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <input type="text" name="query" placeholder="Search..." required />
+      </form>
 
+      <div class="nav-links">
+        <a href="/" class="<%= page === 'home' ? 'active' : '' %>">Home</a>
+        <a href="/upcoming" class="<%= page === 'upcoming' ? 'active' : '' %>">Upcoming</a>
+        <a href="/top" class="<%= page === 'top' ? 'active' : '' %>">Top Releases</a>
+        <% if (isLoggedIn) { %>
+          <div class="user-dropdown nav-user-dropdown">
+            <button class="user-toggle">
+              <% if (user) { %>
+                <%= user.name || user.email %> <span class="arrow">▼</span>
+              <% } %>
+            </button>
+            <div class="user-menu">
+              <a href="/my-movies">My Movies</a>
+              <a href="/profile">Profile</a>
+              <a href="/settings">Settings</a>
+              <a href="/auth/logout">Logout</a>
+            </div>
+          </div>
+        <% } else { %>
+          <a href="/auth/login">Login</a>
+        <% } %>
+      </div>
+
+      <button class="hamburger" id="hamburgerBtn">☰</button>
+    </div>
+  </nav>
 
   <main>
     <%- body %>
   </main>
 
+  <!-- Load JavaScript files -->
   <script src="/js/follow.js"></script>
-  <script>
-    const hamburger = document.getElementById('hamburgerBtn');
-    const navLinks = document.querySelector('.nav-links');
-
-    hamburger.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent immediate close
-      navLinks.classList.toggle('show');
-    });
-
-    // Close nav menu if clicking outside
-    document.addEventListener('click', (e) => {
-      if (navLinks.classList.contains('show') && !navLinks.contains(e.target) && e.target !== hamburger) {
-        navLinks.classList.remove('show');
-      }
-    });
-  </script>
-
-  <script>
-  const userToggle = document.querySelector('.user-toggle');
-  const userDropdown = document.querySelector('.user-dropdown');
-
-  if (userToggle) {
-    userToggle.addEventListener('click', () => {
-      userDropdown.classList.toggle('show');
-    });
-
-    // Optional: close dropdown if clicked outside
-    document.addEventListener('click', (e) => {
-      if (!userDropdown.contains(e.target)) {
-        userDropdown.classList.remove('show');
-      }
-    });
-  }
-</script>
+  <script src="/js/navigation.js"></script>
 
 </body>
 </html>
