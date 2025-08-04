@@ -8,34 +8,28 @@ const {
   unfollowMovie,
 } = require("../services/airtable");
 const { toUtcMidnight } = require("../utils/dateHelpers");
-const { sortByRelevanceAndPopularity } = require("../utils/searchHelpers");
 
-router.get("/search", async (req, res) => {
-  const query = req.query.query;
+router.get("/upcoming", async (req, res) => {
   const followMessage = req.query.followMessage || null;
-  const page = parseInt(req.query.page) || 1; // Add pagination support
-
-  if (!query) return res.redirect("/");
+  const page = parseInt(req.query.page) || 1;
 
   try {
+    // Get upcoming movies from TMDB
     const response = await axios.get(
-      `https://api.themoviedb.org/3/search/movie`,
+      `https://api.themoviedb.org/3/movie/upcoming`,
       {
         params: {
           api_key: process.env.TMDB_API_KEY,
-          query: query,
-          page: page, // Add page parameter
+          page: page,
+          region: "US", // Get US releases
         },
       }
     );
 
     let results = response.data.results;
-
-    results.sort((a, b) => sortByRelevanceAndPopularity(a, b, query));
-
-    // Grab streaming release dates and pre-calculate date-related info
     const now = toUtcMidnight(new Date());
 
+    // Process movies with streaming dates and follow status
     const movies = await Promise.all(
       results.map(async (movie) => {
         const streamingDateRaw = await getStreamingReleaseDate(movie.id);
@@ -75,6 +69,9 @@ router.get("/search", async (req, res) => {
       })
     );
 
+    // Filter out movies that have already been released
+    const upcomingMovies = movies.filter((movie) => movie.canFollow);
+
     let user = null;
     let followedMovieIds = [];
 
@@ -93,25 +90,24 @@ router.get("/search", async (req, res) => {
       );
     }
 
-    // set layout var
-    res.locals.page = "search";
-    res.render("search-results", {
-      title: "Movie Tracker",
-      query,
-      movies,
+    // Set layout var
+    res.locals.page = "upcoming";
+    res.render("upcoming", {
+      title: "Upcoming Movies - Movie Tracker",
+      movies: upcomingMovies,
       user,
       followedMovieIds,
       followMessage,
-      currentPage: page, // Add pagination data
+      currentPage: page,
       totalPages: response.data.total_pages,
-      totalResults: response.data.total_results,
     });
   } catch (err) {
-    console.error("TMDB search error:", err);
+    console.error("TMDB upcoming movies error:", err);
     res.status(500).send("Something went wrong");
   }
 });
 
+// Use the same follow/unfollow endpoints from search-results
 router.post("/follow", async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({
@@ -154,7 +150,6 @@ router.post("/follow", async (req, res) => {
   }
 });
 
-// POST /unfollow
 router.post("/unfollow", async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({

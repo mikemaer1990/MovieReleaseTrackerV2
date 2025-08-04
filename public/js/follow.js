@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const res = await fetch("/follow", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ movieId, title, releaseDate, posterPath })
+          body: JSON.stringify({ movieId, title, releaseDate, posterPath }),
         });
         if (!res.ok) throw new Error();
 
@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("Unable to follow right now.");
       }
 
-    // Handle Unfollow clicks
+      // Handle Unfollow clicks
     } else if (target.matches(".unfollow-button")) {
       e.preventDefault();
       target.classList.add("loading", "click-pop");
@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const res = await fetch("/unfollow", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ movieId: target.dataset.movieId })
+          body: JSON.stringify({ movieId: target.dataset.movieId }),
         });
         if (!res.ok) throw new Error();
 
@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const grid = document.querySelector(".movies-grid");
           if (grid && grid.children.length === 0) {
             const msg = document.createElement("p");
-            msg.textContent = "You’re not following any movies yet.";
+            msg.textContent = "You're not following any movies yet.";
             msg.style.textAlign = "center";
             msg.classList.add("empty-message");
             grid.parentNode.insertBefore(msg, grid.nextSibling);

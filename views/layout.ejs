@@ -1,36 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title><%= title %></title>
-  <link rel="stylesheet" href="/styles.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
-</head>
-<body class="<%= page === 'search' ? 'search-page' : 'my-movies-page' %>">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="<%= page %>-page">
+    <nav class="navbar">
+      <div class="nav-left">
+        <a href="/"><img src="/images/logo.png" alt="Logo" class="logo" /></a>
+      </div>
 
-  <nav class="navbar">
-    <div class="nav-left">
-      <a href="/"><img src="/images/logo.png" alt="Logo" class="logo" /></a>
-    </div>
+      <div class="nav-right">
+        <form class="nav-search" action="/search" method="GET">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input type="text" name="query" placeholder="Search..." required />
+        </form>
 
-    <div class="nav-right">
-      <form class="nav-search" action="/search" method="GET">
-        <span class="search-icon" aria-hidden="true">🔍</span>
-        <input type="text" name="query" placeholder="Search..." required />
-      </form>
-
-      <div class="nav-links">
-        <a href="/" class="<%= page === 'home' ? 'active' : '' %>">Home</a>
-        <a href="/upcoming" class="<%= page === 'upcoming' ? 'active' : '' %>">Upcoming</a>
-        <a href="/top" class="<%= page === 'top' ? 'active' : '' %>">Top Releases</a>
-        <% if (isLoggedIn) { %>
+        <div class="nav-links">
+          <a href="/" class="<%= page === 'home' ? 'active' : '' %>">Home</a>
+          <a href="/upcoming" class="<%= page === 'upcoming' ? 'active' : '' %>"
+            >Upcoming</a
+          >
+          <a href="/top" class="<%= page === 'top' ? 'active' : '' %>"
+            >Top Releases</a
+          >
+          <% if (isLoggedIn) { %>
           <div class="user-dropdown nav-user-dropdown">
             <button class="user-toggle">
-              <% if (user) { %>
-                <%= user.name || user.email %> <span class="arrow">▼</span>
+              <% if (user) { %> <%= user.name || user.email %>
+              <span class="arrow">▼</span>
               <% } %>
             </button>
             <div class="user-menu">
@@ -40,22 +46,19 @@
               <a href="/auth/logout">Logout</a>
             </div>
           </div>
-        <% } else { %>
+          <% } else { %>
           <a href="/auth/login">Login</a>
-        <% } %>
+          <% } %>
+        </div>
+
+        <button class="hamburger" id="hamburgerBtn">☰</button>
       </div>
+    </nav>
 
-      <button class="hamburger" id="hamburgerBtn">☰</button>
-    </div>
-  </nav>
+    <main><%- body %></main>
 
-  <main>
-    <%- body %>
-  </main>
-
-  <!-- Load JavaScript files -->
-  <script src="/js/follow.js"></script>
-  <script src="/js/navigation.js"></script>
-
-</body>
+    <!-- Load JavaScript files -->
+    <script src="/js/follow.js"></script>
+    <script src="/js/navigation.js"></script>
+  </body>
 </html>

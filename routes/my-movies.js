@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { getFollowedMoviesByUserId, unfollowMovie } = require("../services/airtable");
+const {
+  getFollowedMoviesByUserId,
+  unfollowMovie,
+} = require("../services/airtable");
 
 router.get("/", async (req, res) => {
   if (!req.session.userId) {
@@ -8,20 +11,20 @@ router.get("/", async (req, res) => {
   }
   try {
     const followedMovies = await getFollowedMoviesByUserId(req.session.userId);
-
-    const movies = followedMovies.map(record => ({
+    console.log(followedMovies);
+    const movies = followedMovies.map((record) => ({
       id: record.fields.TMDB_ID,
       title: record.fields.Title,
       releaseDate: record.fields.ReleaseDate,
-      posterPath: record.fields.PosterPath
+      posterPath: record.fields.PosterPath,
     }));
+    console.log(movies);
     // set layout var
-    res.locals.page = 'my-movies';
+    res.locals.page = "my-movies";
     res.render("my-movies", {
       title: "My Movies",
       movies,
     });
-
   } catch (error) {
     console.error("Error fetching followed movies:", error);
     res.status(500).send("Internal server error");

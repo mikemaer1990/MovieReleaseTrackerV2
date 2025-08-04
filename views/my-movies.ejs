@@ -1,21 +1,22 @@
-  <h1>My Movies</h1>
+<h1>My Movies</h1>
 
-  <% if (movies.length === 0) { %>
-    <p>You’re not following any movies yet.</p>
-  <% } else { %>
-    <div class="movies-grid">
-      <% movies.forEach(movie => { %>
-        <div class="movie-card" data-movie-id="<%= movie.id %>">
-          <img
-            src="<%= movie.posterPath ? 'https://image.tmdb.org/t/p/w300' + movie.posterPath : '/images/funny-fallback.png' %>"
-            alt="<%= movie.title %>"
-            class="<%= movie.posterPath ? 'movie-poster' : 'movie-poster fallback' %>"
-          />
-          <h3><%= movie.title %></h3>
-          <p><%= movie.releaseDate %></p>
-          <button class="unfollow-button" data-movie-id="<%= movie.id %>">Unfollow</button>
-        </div>
-      <% }) %>
-    </div>
-  <% } %>
-
+<% if (movies.length === 0) { %>
+<p>You’re not following any movies yet.</p>
+<% } else { %>
+<div class="movies-grid">
+  <% movies.forEach(movie => { %>
+  <div class="movie-card" data-movie-id="<%= movie.id %>">
+    <img
+      src="<%= movie.posterPath ? 'https://image.tmdb.org/t/p/w300' + movie.posterPath : '/images/funny-fallback.png' %>"
+      alt="<%= movie.title %>"
+      class="<%= movie.posterPath ? 'movie-poster' : 'movie-poster fallback' %>"
+    />
+    <h3><%= movie.title %></h3>
+    <p><%= movie.releaseDate %></p>
+    <button class="unfollow-button" data-movie-id="<%= movie.id %>">
+      Unfollow
+    </button>
+  </div>
+  <% }) %>
+</div>
+<% } %>
