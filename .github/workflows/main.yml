@@ -2,6 +2,7 @@ name: Daily Website Ping with Notifications
 
 on:
   schedule:
+    # Runs at 6:00 AM PST daily (2:00 PM UTC)
     - cron: '0 14 * * *'
   workflow_dispatch:
 
@@ -56,16 +57,6 @@ jobs:
               exit 1
             fi
           fi
-      
-      # Optional: Send notification on failure (requires webhook URL secret)
-      - name: Notify on failure
-        if: failure()
-        run: |
-          echo "Sending failure notification..."
-          # Example: Discord webhook
-          # curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
-          #   -H "Content-Type: application/json" \
-          #   -d '{"content": "🚨 Movie Release Tracker daily check failed!"}'
       
       - name: Summary
         run: |
