@@ -12,11 +12,13 @@
 
       <% movies.forEach(movie => { %>
         <div class="movie-card">
+          <a href="/movie/<%= movie.id %>" class="movie-link">
           <img
             src="<%= movie.poster_path ? 'https://image.tmdb.org/t/p/w300' + movie.poster_path : '/images/funny-fallback.png' %>"
             alt="<%= movie.title %>"
             class="<%= movie.poster_path ? 'movie-poster' : 'movie-poster fallback' %>"
           />
+          </a>
           <h3><%= movie.title %></h3>
           <p><%= movie.displayDate %></p>
 

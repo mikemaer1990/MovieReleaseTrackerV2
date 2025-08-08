@@ -6,11 +6,13 @@
 <div class="movies-grid">
   <% movies.forEach(movie => { %>
   <div class="movie-card" data-movie-id="<%= movie.id %>">
-    <img
-      src="<%= movie.posterPath ? 'https://image.tmdb.org/t/p/w300' + movie.posterPath : '/images/funny-fallback.png' %>"
-      alt="<%= movie.title %>"
-      class="<%= movie.posterPath ? 'movie-poster' : 'movie-poster fallback' %>"
-    />
+    <a href="/movie/<%= movie.id %>" class="movie-link">
+      <img
+        src="<%= movie.posterPath ? 'https://image.tmdb.org/t/p/w300' + movie.posterPath : '/images/funny-fallback.png' %>"
+        alt="<%= movie.title %>"
+        class="<%= movie.posterPath ? 'movie-poster' : 'movie-poster fallback' %>"
+      />
+    </a>
     <h3><%= movie.title %></h3>
     <p><%= movie.releaseDate %></p>
     <button class="unfollow-button" data-movie-id="<%= movie.id %>">

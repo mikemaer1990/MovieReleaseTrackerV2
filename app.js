@@ -62,6 +62,7 @@ const upcomingRouter = require("./routes/upcoming");
 const authRoutes = require("./routes/auth");
 const myMoviesRouter = require("./routes/my-movies");
 const checkReleases = require("./routes/check-releases");
+const movieDetailsRoutes = require("./routes/movie-details");
 
 app.use("/", indexRoutes);
 app.use("/", searchResultsRouter);
@@ -69,6 +70,7 @@ app.use("/", upcomingRouter);
 app.use("/auth", authRoutes);
 app.use("/my-movies", myMoviesRouter);
 app.use("/check-releases", checkReleases);
+app.use("/movie", movieDetailsRoutes);
 
 // 404 handler
 app.use((req, res) => {

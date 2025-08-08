@@ -1,0 +1,298 @@
+<div class="movie-detail-container">
+  <!-- Hero Section -->
+  <div class="movie-hero">
+    <img 
+      src="<%= movie.backdrop_path ? 'https://image.tmdb.org/t/p/w1280' + movie.backdrop_path : '/images/default-backdrop.jpg' %>"
+      alt="<%= movie.title %> backdrop"
+      class="movie-backdrop"
+    />
+    <div class="movie-hero-overlay">
+      <h1 class="movie-title-hero"><%= movie.title %></h1>
+      <% if (movie.tagline) { %>
+        <p class="movie-tagline">"<%= movie.tagline %>"</p>
+      <% } %>
+      
+      <!-- Prominent Release Date -->
+      <div class="hero-release-info">
+        <% if (movie.release_date) { %>
+          <div class="hero-release-date">
+            <span class="release-label">🎬 In Theaters</span>
+            <span class="release-date"><%= new Date(movie.release_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+          </div>
+        <% } %>
+        <% if (movie.streaming_date) { %>
+          <div class="hero-streaming-date">
+            <span class="streaming-label">📺 Streaming</span>
+            <span class="streaming-date"><%= new Date(movie.streaming_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="movie-content">
+    <!-- Sidebar -->
+    <div class="movie-sidebar">
+      <img 
+        src="<%= movie.poster_path ? 'https://image.tmdb.org/t/p/w500' + movie.poster_path : '/images/funny-fallback.png' %>"
+        alt="<%= movie.title %> poster"
+        class="movie-poster-large"
+      />
+      
+      <div class="movie-key-info">
+        <h3>Movie Info</h3>
+        
+        <div class="info-item">
+          <span class="info-label">Rating</span>
+          <span class="info-value">
+            <span class="rating-score"><%= movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A' %>/10</span>
+          </span>
+        </div>
+        
+        <div class="info-item">
+          <span class="info-label">Release Date</span>
+          <span class="info-value"><%= movie.release_date ? new Date(movie.release_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'TBA' %></span>
+        </div>
+        
+        <% if (movie.streaming_date) { %>
+        <div class="info-item">
+          <span class="info-label">Streaming Date</span>
+          <span class="info-value"><%= new Date(movie.streaming_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+        </div>
+        <% } %>
+        
+        <% if (movie.runtime) { %>
+        <div class="info-item">
+          <span class="info-label">Runtime</span>
+          <span class="info-value"><%= Math.floor(movie.runtime / 60) %>h <%= movie.runtime % 60 %>m</span>
+        </div>
+        <% } %>
+        
+        <% if (movie.genres && movie.genres.length > 0) { %>
+        <div class="info-item">
+          <span class="info-label">Genres</span>
+          <span class="info-value"><%= movie.genres.map(g => g.name).join(', ') %></span>
+        </div>
+        <% } %>
+        
+        <% if (movie.budget && movie.budget > 0) { %>
+        <div class="info-item">
+          <span class="info-label">Budget</span>
+          <span class="info-value">$<%= movie.budget.toLocaleString() %></span>
+        </div>
+        <% } %>
+        
+        <% if (movie.revenue && movie.revenue > 0) { %>
+        <div class="info-item">
+          <span class="info-label">Revenue</span>
+          <span class="info-value">$<%= movie.revenue.toLocaleString() %></span>
+        </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="movie-main-content">
+      <!-- Action Buttons -->
+      <div class="movie-actions">
+        <% if (user) { %>
+          <% if (isFollowing) { %>
+            <button class="unfollow-action-btn" data-movie-id="<%= movie.id %>">
+              <span>✓</span> Following
+            </button>
+          <% } else { %>
+            <button class="follow-action-btn" data-movie-id="<%= movie.id %>">
+              <span>+</span> Follow Movie
+            </button>
+          <% } %>
+        <% } else { %>
+          <!-- <div class="auth-prompt"> -->
+            <!-- <p class="auth-message">Want to get notified when this movie is available?</p> -->
+            <a href="/auth/login?redirect=<%= encodeURIComponent('/movie/' + movie.id) %>" class="auth-login-btn">
+              <span>🔒</span> Sign In to Follow
+            </a>
+          <!-- </div> -->
+        <% } %>
+        
+        <button class="trailer-btn" id="trailerBtn" <%= !trailer ? 'disabled' : '' %>>
+          <span>▶</span> <%= trailer ? 'Watch Trailer' : 'No Trailer Available' %>
+        </button>
+      </div>
+
+      <!-- Overview -->
+      <div class="movie-overview">
+        <h2>Overview</h2>
+        <p><%= movie.overview || 'No overview available.' %></p>
+      </div>
+
+      <!-- Director Info -->
+      <% if (director) { %>
+      <div class="movie-overview">
+        <h2>Director</h2>
+        <p><strong><%= director.name %></strong></p>
+      </div>
+      <% } %>
+
+      <!-- Cast -->
+      <% if (cast && cast.length > 0) { %>
+      <div class="movie-cast">
+        <h2>Top Cast</h2>
+        <div class="cast-grid">
+          <% cast.slice(0, 8).forEach(member => { %>
+          <div class="cast-member" data-person-id="<%= member.id %>">
+            <img 
+              src="<%= member.profile_path ? 'https://image.tmdb.org/t/p/w185' + member.profile_path : '/images/user.png' %>"
+              alt="<%= member.name %>"
+              class="cast-photo"
+            />
+            <div class="cast-name"><%= member.name %></div>
+            <div class="cast-character"><%= member.character %></div>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Trailer Modal -->
+<div class="trailer-modal" id="trailerModal">
+  <div class="trailer-container">
+    <button class="trailer-close" id="trailerClose">&times;</button>
+    <iframe 
+      class="trailer-iframe" 
+      id="trailerIframe"
+      src="" 
+      allowfullscreen>
+    </iframe>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Follow/Unfollow functionality
+  const followBtn = document.querySelector('.follow-action-btn');
+  const unfollowBtn = document.querySelector('.unfollow-action-btn');
+  
+  if (followBtn) {
+    followBtn.addEventListener('click', async function() {
+      const movieId = this.dataset.movieId;
+      const button = this;
+      
+      // Add loading state
+      const originalContent = button.innerHTML;
+      button.innerHTML = '<span class="loading-spinner"></span> Following...';
+      button.disabled = true;
+      
+      try {
+        const response = await fetch(`/movie/follow/${movieId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (response.ok) {
+          // Refresh page to show updated state
+          window.location.reload();
+        } else {
+          throw new Error('Failed to follow movie');
+        }
+      } catch (error) {
+        console.error('Error following movie:', error);
+        button.innerHTML = originalContent;
+        button.disabled = false;
+        alert('Failed to follow movie. Please try again.');
+      }
+    });
+  }
+  
+  if (unfollowBtn) {
+    unfollowBtn.addEventListener('click', async function() {
+      const movieId = this.dataset.movieId;
+      const button = this;
+      
+      // Add loading state
+      const originalContent = button.innerHTML;
+      button.innerHTML = '<span class="loading-spinner"></span> Unfollowing...';
+      button.disabled = true;
+      
+      try {
+        const response = await fetch(`/movie/unfollow/${movieId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (response.ok) {
+          // Refresh page to show updated state
+          window.location.reload();
+        } else {
+          throw new Error('Failed to unfollow movie');
+        }
+      } catch (error) {
+        console.error('Error unfollowing movie:', error);
+        button.innerHTML = originalContent;
+        button.disabled = false;
+        alert('Failed to unfollow movie. Please try again.');
+      }
+    });
+  }
+  
+  // Trailer modal functionality
+  const trailerBtn = document.getElementById('trailerBtn');
+  const trailerModal = document.getElementById('trailerModal');
+  const trailerClose = document.getElementById('trailerClose');
+  const trailerIframe = document.getElementById('trailerIframe');
+  
+  if (trailerBtn && !trailerBtn.disabled) {
+    trailerBtn.addEventListener('click', function() {
+      const trailerKey = '<%= trailer ? trailer.key : "" %>';
+      if (trailerKey) {
+        trailerIframe.src = `https://www.youtube.com/embed/${trailerKey}?autoplay=1&rel=0`;
+        trailerModal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+      }
+    });
+  }
+  
+  if (trailerClose) {
+    trailerClose.addEventListener('click', closeTrailer);
+  }
+  
+  if (trailerModal) {
+    trailerModal.addEventListener('click', function(e) {
+      if (e.target === trailerModal) {
+        closeTrailer();
+      }
+    });
+  }
+  
+  // Close trailer with escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && trailerModal.classList.contains('show')) {
+      closeTrailer();
+    }
+  });
+  
+  function closeTrailer() {
+    trailerModal.classList.remove('show');
+    trailerIframe.src = '';
+    document.body.style.overflow = '';
+  }
+  
+  // Cast member click functionality (for future cast profiles)
+  const castMembers = document.querySelectorAll('.cast-member');
+  castMembers.forEach(member => {
+    member.addEventListener('click', function() {
+      const personId = this.dataset.personId;
+      // For now, just log the person ID - you can implement cast profile pages later
+      console.log('Cast member clicked:', personId);
+      // Future: window.location.href = `/person/${personId}`;
+    });
+  });
+});
+</script>
