@@ -57,11 +57,49 @@ jobs:
               exit 1
             fi
           fi
-      
+
+      - name: Execute streaming dates check script
+        id: streaming_check
+        run: |
+          echo "Running daily streaming dates check..."
+
+          response=$(curl -s -w "%{http_code}|%{time_total}" -o /tmp/streaming_response.txt \
+            "https://moviereleasetrackerv2.onrender.com/jobs/check-streaming-dates?key=jumbletree" || echo "000|0")
+
+          http_code=$(echo $response | cut -d'|' -f1)
+          time_total=$(echo $response | cut -d'|' -f2)
+
+          echo "streaming_code=$http_code" >> $GITHUB_OUTPUT
+          echo "streaming_response_time=$time_total" >> $GITHUB_OUTPUT
+
+          if [ $http_code -eq 200 ]; then
+            echo "✅ Streaming dates check success! Response: $http_code (${time_total}s)"
+            echo "Response body:"
+            cat /tmp/streaming_response.txt
+          else
+            echo "❌ Streaming dates check failed with code: $http_code"
+            echo "Retrying in 60 seconds..."
+            sleep 60
+
+            retry_response=$(curl -s -w "%{http_code}" -o /tmp/streaming_retry_response.txt \
+              "https://moviereleasetrackerv2.onrender.com/jobs/check-streaming-dates?key=jumbletree" || echo "000")
+
+            echo "streaming_retry_code=$retry_response" >> $GITHUB_OUTPUT
+
+            if [ $retry_response -eq 200 ]; then
+              echo "✅ Streaming dates retry successful! Code: $retry_response"
+            else
+              echo "❌ Streaming dates retry also failed with code: $retry_response"
+              exit 1
+            fi
+          fi
+
       - name: Summary
         run: |
           echo "## Movie Release Check Summary" >> $GITHUB_STEP_SUMMARY
           echo "- Wake-up response: ${{ steps.wakeup.outputs.wakeup_code }}" >> $GITHUB_STEP_SUMMARY
           echo "- Main ping response: ${{ steps.main_ping.outputs.main_code }}" >> $GITHUB_STEP_SUMMARY
           echo "- Response time: ${{ steps.main_ping.outputs.response_time }}s" >> $GITHUB_STEP_SUMMARY
+          echo "- Streaming dates check response: ${{ steps.streaming_check.outputs.streaming_code }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Streaming check response time: ${{ steps.streaming_check.outputs.streaming_response_time }}s" >> $GITHUB_STEP_SUMMARY
           echo "- Completed at: $(date)" >> $GITHUB_STEP_SUMMARY
