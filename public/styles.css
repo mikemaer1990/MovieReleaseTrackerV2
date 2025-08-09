@@ -329,7 +329,19 @@ body {
   border: 1px solid transparent;
   transition: background var(--transition-fast), border var(--transition-fast);
 }
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--color-bg-secondary) inset !important;
+  -webkit-text-fill-color: var(--color-text-secondary) !important;
+}
 
+/* For focused state to match your :focus-within styling */
+.nav-search:focus-within input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 30px #222 inset !important;
+  -webkit-text-fill-color: var(--color-gold-medium) !important;
+}
 .nav-search input {
   background: transparent;
   border: none;
@@ -1984,6 +1996,149 @@ body {
 
 @media (max-width: 500px) {
   .auth-login-btn {
+    font-size: 0.9rem;
+  }
+}
+
+/* ============================
+   Filter Controls for Top Releases
+============================ */
+.filter-controls {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-lg) var(--spacing-2xl) var(--spacing-md);
+}
+
+.filter-form {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-width: auto;
+}
+
+.filter-group label {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.filter-select {
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--color-gold-medium);
+  box-shadow: 0 0 0 2px rgba(243, 217, 107, 0.2);
+}
+
+.filter-select:hover {
+  border-color: var(--color-gold-medium);
+}
+
+.filter-button {
+  display: none; /* Hide since we have auto-submit */
+}
+
+.filter-button:hover {
+  background: var(--gradient-gold-hover);
+  transform: translateY(-1px);
+}
+
+/* Movie rating display */
+.movie-rating {
+  color: var(--color-gold-medium);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+}
+
+/* Follow message styling */
+.follow-msg {
+  text-align: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin: var(--spacing-lg) auto;
+  max-width: 600px;
+  background: rgba(243, 217, 107, 0.1);
+  border: 1px solid var(--color-gold-medium);
+  border-radius: var(--radius-md);
+  color: var(--color-gold-medium);
+  font-weight: 500;
+}
+
+/* ============================
+   Responsive Design for Filters
+============================ */
+@media (max-width: 768px) {
+  .filter-controls {
+    padding: var(--spacing-lg) var(--spacing-md) 0;
+  }
+
+  .filter-form {
+    padding: var(--spacing-lg);
+  }
+
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-lg);
+  }
+
+  .filter-group {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .filter-button {
+    width: 100%;
+    padding: var(--spacing-md);
+  }
+}
+
+@media (max-width: 500px) {
+  .filter-controls {
+    padding: var(--spacing-md) var(--spacing-sm) 0;
+  }
+
+  .filter-form {
+    padding: var(--spacing-md);
+  }
+
+  .filter-row {
+    gap: var(--spacing-md);
+  }
+
+  .filter-select {
+    padding: var(--spacing-sm);
     font-size: 0.9rem;
   }
 }
