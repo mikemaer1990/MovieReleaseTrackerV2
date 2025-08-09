@@ -11,66 +11,101 @@ const { toUtcMidnight } = require("../utils/dateHelpers");
 
 router.get("/upcoming", async (req, res) => {
   const followMessage = req.query.followMessage || null;
-  const page = parseInt(req.query.page) || 1;
+  const uiPage = parseInt(req.query.page) || 1;
+  const moviesPerPage = 15;
+  const maxFilteredMovies = moviesPerPage * 5; // max 5 UI pages of filtered movies
+  const now = toUtcMidnight(new Date());
 
   try {
-    // Get upcoming movies from TMDB
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/movie/upcoming`,
-      {
-        params: {
-          api_key: process.env.TMDB_API_KEY,
-          page: page,
-          region: "US", // Get US releases
-        },
-      }
-    );
+    let collectedMovies = [];
+    let tmdbPage = 1;
+    let totalTmdbPages = 1; // will update after first fetch
 
-    let results = response.data.results;
-    const now = toUtcMidnight(new Date());
-
-    // Process movies with streaming dates and follow status
-    const movies = await Promise.all(
-      results.map(async (movie) => {
-        const streamingDateRaw = await getStreamingReleaseDate(movie.id);
-        const streamingDate = streamingDateRaw
-          ? new Date(streamingDateRaw)
-          : null;
-        const theatricalDate = movie.release_date
-          ? new Date(movie.release_date)
-          : null;
-
-        const streamingDateMidnight = streamingDate
-          ? toUtcMidnight(streamingDate)
-          : null;
-        const theatricalDateMidnight = theatricalDate
-          ? toUtcMidnight(theatricalDate)
-          : null;
-
-        const canFollow =
-          (streamingDateMidnight && streamingDateMidnight > now) ||
-          (theatricalDateMidnight && theatricalDateMidnight > now);
-
-        let displayDate = "Coming Soon";
-        if (streamingDateMidnight) {
-          displayDate = streamingDateMidnight.toISOString().split("T")[0];
-        } else if (theatricalDateMidnight) {
-          displayDate =
-            theatricalDateMidnight.toISOString().split("T")[0] +
-            " (Theatrical)";
+    // Fetch TMDB pages until we have maxFilteredMovies filtered movies or run out of TMDB pages
+    while (
+      collectedMovies.length < maxFilteredMovies &&
+      tmdbPage <= totalTmdbPages
+    ) {
+      const response = await axios.get(
+        `https://api.themoviedb.org/3/movie/upcoming`,
+        {
+          params: {
+            api_key: process.env.TMDB_API_KEY,
+            page: tmdbPage,
+            region: "US",
+          },
         }
+      );
 
-        return {
-          ...movie,
-          streamingDateRaw,
-          canFollow,
-          displayDate,
-        };
-      })
+      totalTmdbPages = response.data.total_pages;
+      const results = response.data.results;
+
+      const processedMovies = await Promise.all(
+        results.map(async (movie) => {
+          const streamingDateRaw = await getStreamingReleaseDate(movie.id);
+          const streamingDate = streamingDateRaw
+            ? new Date(streamingDateRaw)
+            : null;
+          const theatricalDate = movie.release_date
+            ? new Date(movie.release_date)
+            : null;
+
+          const streamingDateMidnight = streamingDate
+            ? toUtcMidnight(streamingDate)
+            : null;
+          const theatricalDateMidnight = theatricalDate
+            ? toUtcMidnight(theatricalDate)
+            : null;
+
+          const canFollow =
+            (streamingDateMidnight && streamingDateMidnight > now) ||
+            (theatricalDateMidnight && theatricalDateMidnight > now);
+
+          let displayDate = "Coming Soon";
+          if (streamingDateMidnight) {
+            displayDate = streamingDateMidnight.toISOString().split("T")[0];
+          } else if (theatricalDateMidnight) {
+            displayDate =
+              theatricalDateMidnight.toISOString().split("T")[0] +
+              " (Theatrical)";
+          }
+
+          return {
+            ...movie,
+            streamingDateRaw,
+            canFollow,
+            displayDate,
+          };
+        })
+      );
+
+      // Filter and exclude duplicates
+      const newFiltered = processedMovies.filter(
+        (movie) =>
+          movie.canFollow &&
+          !collectedMovies.some((colMovie) => colMovie.id === movie.id)
+      );
+
+      collectedMovies.push(...newFiltered);
+      tmdbPage++;
+    }
+
+    // Paginate locally
+    const totalPages = Math.ceil(collectedMovies.length / moviesPerPage);
+
+    // If requested page exceeds totalPages, show empty or last page
+    const currentPage = uiPage > totalPages ? totalPages : uiPage;
+    const startIndex = (currentPage - 1) * moviesPerPage;
+    const pageMovies = collectedMovies.slice(
+      startIndex,
+      startIndex + moviesPerPage
     );
 
-    // Filter out movies that have already been released
-    const upcomingMovies = movies.filter((movie) => movie.canFollow);
+    console.log(
+      `TMDB pages fetched: ${tmdbPage - 1}, filtered movies collected: ${
+        collectedMovies.length
+      }`
+    );
 
     let user = null;
     let followedMovieIds = [];
@@ -90,16 +125,15 @@ router.get("/upcoming", async (req, res) => {
       );
     }
 
-    // Set layout var
     res.locals.page = "upcoming";
     res.render("upcoming", {
       title: "Upcoming Movies - Movie Tracker",
-      movies: upcomingMovies,
+      movies: pageMovies,
       user,
       followedMovieIds,
       followMessage,
-      currentPage: page,
-      totalPages: response.data.total_pages,
+      currentPage,
+      totalPages,
     });
   } catch (err) {
     console.error("TMDB upcoming movies error:", err);
@@ -107,7 +141,8 @@ router.get("/upcoming", async (req, res) => {
   }
 });
 
-// Use the same follow/unfollow endpoints from search-results
+// Your existing follow/unfollow routes here unchanged...
+
 router.post("/follow", async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({
