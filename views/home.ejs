@@ -1,0 +1,29 @@
+<div class="search-wrapper">
+  <section class="search-container">
+    <h1 class="landing-title">MovieReleaseTracker</h1>
+    <p class="landing-subtitle">
+      Track upcoming releases. Never miss a favorite.
+    </p>
+
+    <% if (isLoggedIn && user && user.name) { %>
+    <p class="welcome-msg">Welcome back, <%= user.name %> 👋</p>
+    <% } %>
+
+    <form
+      class="landing-search"
+      action="/search"
+      method="GET"
+      autocomplete="off"
+    >
+      <input
+        type="text"
+        name="query"
+        placeholder="Search for a movie..."
+        value=""
+        required
+        autofocus
+      />
+      <button type="submit">Search</button>
+    </form>
+  </section>
+</div>

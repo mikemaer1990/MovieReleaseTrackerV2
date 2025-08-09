@@ -6,8 +6,8 @@ class Navigation {
 
   init() {
     // Wait for DOM to be ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => {
         this.initHamburgerMenu();
         this.initUserDropdown();
       });
@@ -18,42 +18,44 @@ class Navigation {
   }
 
   initHamburgerMenu() {
-    const hamburger = document.getElementById('hamburgerBtn');
-    const navLinks = document.querySelector('.nav-links');
+    const hamburger = document.getElementById("hamburgerBtn");
+    const navLinks = document.querySelector(".nav-links");
 
     // Exit if elements don't exist
     if (!hamburger || !navLinks) return;
 
-    hamburger.addEventListener('click', (e) => {
+    hamburger.addEventListener("click", (e) => {
       e.stopPropagation(); // Prevent immediate close
-      navLinks.classList.toggle('show');
+      navLinks.classList.toggle("show");
     });
 
     // Close nav menu if clicking outside
-    document.addEventListener('click', (e) => {
-      if (navLinks.classList.contains('show') && 
-          !navLinks.contains(e.target) && 
-          e.target !== hamburger) {
-        navLinks.classList.remove('show');
+    document.addEventListener("click", (e) => {
+      if (
+        navLinks.classList.contains("show") &&
+        !navLinks.contains(e.target) &&
+        e.target !== hamburger
+      ) {
+        navLinks.classList.remove("show");
       }
     });
   }
 
   initUserDropdown() {
-    const userToggle = document.querySelector('.user-toggle');
-    const userDropdown = document.querySelector('.user-dropdown');
+    const userToggle = document.querySelector(".user-toggle");
+    const userDropdown = document.querySelector(".user-dropdown");
 
     // Exit if elements don't exist (user might not be logged in)
     if (!userToggle || !userDropdown) return;
 
-    userToggle.addEventListener('click', () => {
-      userDropdown.classList.toggle('show');
+    userToggle.addEventListener("click", () => {
+      userDropdown.classList.toggle("show");
     });
 
     // Close dropdown if clicked outside
-    document.addEventListener('click', (e) => {
+    document.addEventListener("click", (e) => {
       if (!userDropdown.contains(e.target)) {
-        userDropdown.classList.remove('show');
+        userDropdown.classList.remove("show");
       }
     });
   }

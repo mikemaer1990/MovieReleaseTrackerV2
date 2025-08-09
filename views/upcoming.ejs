@@ -1,0 +1,73 @@
+<section class="results-header">
+  <p>Upcoming Movies</p>
+</section>
+
+<% if (followMessage) { %>
+  <p class="follow-msg"><%= followMessage %></p>
+<% } %>
+
+<% if ((movies || []).length > 0) { %>
+  <div class="grid-container">
+    <div class="results-grid">
+
+      <% movies.forEach(movie => { %>
+        <div class="movie-card">
+          <a href="/movie/<%= movie.id %>" class="movie-link">
+          <img
+            src="<%= movie.poster_path ? 'https://image.tmdb.org/t/p/w300' + movie.poster_path : '/images/funny-fallback.png' %>"
+            alt="<%= movie.title %>"
+            class="<%= movie.poster_path ? 'movie-poster' : 'movie-poster fallback' %>"
+          />
+          </a>
+          <h3><%= movie.title %></h3>
+          <p><%= movie.displayDate %></p>
+
+          <% if (user) { %>
+            <% if (followedMovieIds.includes(Number(movie.id))) { %>
+              <button
+                class="unfollow-button"
+                data-movie-id="<%= movie.id %>"
+              >Unfollow</button>
+            <% } else { %>
+              <button
+                class="follow-button"
+                data-movie-id="<%= movie.id %>"
+                data-title="<%= movie.title %>"
+                data-release-date="<%= movie.displayDate %>"
+                data-poster-path="<%= movie.poster_path %>"
+                <%= movie.canFollow ? '' : 'disabled title="Cannot follow — no streaming date and theatrical release over 21 days ago"' %>
+              >
+                Follow
+              </button>
+            <% } %>
+          <% } else { %>
+            <p>
+              <a href="/auth/login?redirect=<%= encodeURIComponent('/upcoming') %>">
+                Login to follow
+              </a>
+            </p>
+          <% } %>
+        </div>
+      <% }); %>
+
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <% if (totalPages > 1) { %>
+    <div class="pagination">
+      <% if (currentPage > 1) { %>
+        <a href="/upcoming?page=<%= currentPage - 1 %>" class="pagination-btn">← Previous</a>
+      <% } %>
+      
+      <span class="pagination-info">Page <%= currentPage %> of <%= totalPages %></span>
+      
+      <% if (currentPage < totalPages) { %>
+        <a href="/upcoming?page=<%= currentPage + 1 %>" class="pagination-btn">Next →</a>
+      <% } %>
+    </div>
+  <% } %>
+
+<% } else { %>
+  <p style="text-align:center;">No upcoming movies found.</p>
+<% } %>

@@ -1,7 +1,7 @@
 <h1>Register</h1>
 <form action="/auth/register" method="POST">
   <% if (error) { %>
-    <p style="color:red;"><%= error %></p>
+  <p style="color: red"><%= error %></p>
   <% } %>
   <input type="text" name="name" placeholder="Name (optional)" />
   <input type="email" name="email" placeholder="Email" required />

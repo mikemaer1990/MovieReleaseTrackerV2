@@ -11,17 +11,21 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
-app.use(express.urlencoded({
-  extended: true
-}));
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'supersecretkey',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false
-  } // true in production with HTTPS
-}));
+app.use(
+  express.urlencoded({
+    extended: true,
+  })
+);
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "supersecretkey",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false,
+    }, // true in production with HTTPS
+  })
+);
 
 // Set view engine and layout middleware
 app.set("view engine", "ejs");
@@ -47,28 +51,33 @@ app.use((req, res, next) => {
     res.locals.user = null;
   }
 
-  res.locals.page = '';
+  res.locals.page = "";
   next();
 });
-
 
 // Routes
 const indexRoutes = require("./routes/index");
 const searchResultsRouter = require("./routes/search-results");
+const upcomingRouter = require("./routes/upcoming");
 const authRoutes = require("./routes/auth");
 const myMoviesRouter = require("./routes/my-movies");
-const checkReleases = require('./routes/check-releases');
+const checkReleases = require("./routes/check-releases");
+const movieDetailsRoutes = require("./routes/movie-details");
+const topReleasesRouter = require("./routes/top-releases");
 
 app.use("/", indexRoutes);
 app.use("/", searchResultsRouter);
+app.use("/", upcomingRouter);
 app.use("/auth", authRoutes);
 app.use("/my-movies", myMoviesRouter);
-app.use('/check-releases', checkReleases);
+app.use("/check-releases", checkReleases);
+app.use("/movie", movieDetailsRoutes);
+app.use("/", topReleasesRouter);
 
 // 404 handler
 app.use((req, res) => {
   res.status(404).render("404", {
-    title: "404 - Not Found"
+    title: "404 - Not Found",
   });
 });
 
