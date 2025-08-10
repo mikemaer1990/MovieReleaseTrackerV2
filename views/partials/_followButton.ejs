@@ -1,0 +1,20 @@
+<div class="follow-container"
+     data-movie-id="<%= movie.id %>"
+     data-title="<%= movie.title %>"
+     data-release-date="<%= movie.displayDate %>"
+     data-poster-path="<%= movie.poster_path %>">
+
+  <div class="follow-options-panel" aria-hidden="true">
+    <button class="follow-type-btn" data-type="theatrical" title="Follow Theatrical Release">🎭</button>
+    <button class="follow-type-btn" data-type="streaming" title="Follow Streaming Release">📺</button>
+    <button class="follow-type-btn" data-type="both" title="Follow Both Releases">🎬</button>
+  </div>
+
+  <% if (followedMovieIds.includes(Number(movie.id))) { %>
+    <button class="unfollow-button">Unfollow</button>
+  <% } else { %>
+    <button class="follow-button" <%= movie.canFollow ? '' : 'disabled title="Cannot follow — no streaming date and theatrical release over 21 days ago"' %>>
+      Follow
+    </button>
+  <% } %>
+</div>

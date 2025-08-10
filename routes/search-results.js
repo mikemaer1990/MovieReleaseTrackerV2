@@ -35,7 +35,6 @@ router.get("/search", async (req, res) => {
 
     // Grab streaming release dates and pre-calculate date-related info
     const now = toUtcMidnight(new Date());
-
     const movies = await Promise.all(
       results.map(async (movie) => {
         const streamingDateRaw = await getStreamingReleaseDate(movie.id);
@@ -53,9 +52,25 @@ router.get("/search", async (req, res) => {
           ? toUtcMidnight(theatricalDate)
           : null;
 
+        const now = toUtcMidnight(new Date());
+        const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
+
+        const theatricalInPast60Days =
+          theatricalDateMidnight &&
+          theatricalDateMidnight <= now &&
+          now - theatricalDateMidnight <= SIXTY_DAYS_MS;
+
+        const theatricalInFuture =
+          theatricalDateMidnight && theatricalDateMidnight > now;
+
+        const streamingInFuture =
+          streamingDateMidnight && streamingDateMidnight > now;
+
         const canFollow =
-          (streamingDateMidnight && streamingDateMidnight > now) ||
-          (theatricalDateMidnight && theatricalDateMidnight > now);
+          (theatricalInPast60Days &&
+            (!streamingDateMidnight || streamingDateMidnight > now)) ||
+          theatricalInFuture ||
+          (!theatricalDateMidnight && streamingInFuture);
 
         let displayDate = "Coming Soon";
         if (streamingDateMidnight) {
@@ -120,30 +135,48 @@ router.post("/follow", async (req, res) => {
     });
   }
 
-  const { movieId, title, posterPath } = req.body;
+  let { movieId, title, posterPath, followType } = req.body;
+  followType = (followType || "").toLowerCase();
+
+  const validFollowTypes = ["theatrical", "streaming", "both"];
+  if (!validFollowTypes.includes(followType)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid follow type.",
+    });
+  }
 
   try {
-    const releaseDate = await getStreamingReleaseDate(movieId);
+    const followTypesToCreate =
+      followType === "both" ? ["theatrical", "streaming"] : [followType];
 
-    if (!releaseDate) {
-      return res.status(400).json({
-        success: false,
-        message: "Could not find streaming or DVD release date",
-      });
-    }
+    // Create follow records for each followType requested
+    await Promise.all(
+      followTypesToCreate.map(async (type) => {
+        let releaseDate = null;
+        if (type === "streaming") {
+          releaseDate = await getStreamingReleaseDate(movieId);
+        }
+        // Add theatrical release date fetch here if desired
 
-    await followMovie(req.session.airtableRecordId, {
-      TMDB_ID: Number(movieId),
-      Title: title,
-      ReleaseDate: releaseDate,
-      PosterPath: posterPath,
-      User: [req.session.airtableRecordId],
-      UserID: req.session.userId,
-    });
+        await followMovie(req.session.airtableRecordId, {
+          TMDB_ID: Number(movieId),
+          Title: title,
+          ReleaseDate: releaseDate,
+          PosterPath: posterPath,
+          User: [req.session.airtableRecordId],
+          UserID: req.session.userId,
+          FollowType: type,
+          StreamingDateAvailable: type === "streaming" && Boolean(releaseDate),
+          StreamingReleaseDate:
+            type === "streaming" ? releaseDate || null : null,
+        });
+      })
+    );
 
     res.json({
       success: true,
-      message: `You are now following "${title}"`,
+      message: `You are now following "${title}" (${followType}).`,
     });
   } catch (error) {
     console.error("Error following movie:", error);
@@ -163,19 +196,24 @@ router.post("/unfollow", async (req, res) => {
     });
   }
 
-  const { movieId } = req.body;
+  const { movieId, followType } = req.body;
 
   try {
-    const success = await unfollowMovie(req.session.userId, Number(movieId));
+    const success = await unfollowMovie(
+      req.session.userId,
+      Number(movieId),
+      followType
+    );
+
     if (success) {
       res.json({
         success: true,
-        message: "Movie unfollowed successfully",
+        message: `Movie unfollowed successfully (${followType || "all types"})`,
       });
     } else {
       res.status(404).json({
         success: false,
-        message: "Movie not found for this user",
+        message: "Movie follow record not found for this user and follow type",
       });
     }
   } catch (error) {

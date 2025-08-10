@@ -1,24 +1,253 @@
-<h1>My Movies</h1>
+<div class="my-movies-page">
+  <h1>My Movies</h1>
 
-<% if (movies.length === 0) { %>
-<p>You’re not following any movies yet.</p>
-<% } else { %>
-<div class="movies-grid">
-  <% movies.forEach(movie => { %>
-  <div class="movie-card" data-movie-id="<%= movie.id %>">
-    <a href="/movie/<%= movie.id %>" class="movie-link">
-      <img
-        src="<%= movie.posterPath ? 'https://image.tmdb.org/t/p/w300' + movie.posterPath : '/images/funny-fallback.png' %>"
-        alt="<%= movie.title %>"
-        class="<%= movie.posterPath ? 'movie-poster' : 'movie-poster fallback' %>"
-      />
-    </a>
-    <h3><%= movie.title %></h3>
-    <p><%= movie.releaseDate %></p>
-    <button class="unfollow-button" data-movie-id="<%= movie.id %>">
-      Unfollow
-    </button>
+  <% if (movies.length === 0) { %>
+  <div class="empty-state">
+    <p>You're not following any movies yet.</p>
   </div>
-  <% }) %>
+  <% } else { %>
+
+  <!-- Stats Summary -->
+  <div class="stats-summary">
+    <div class="stat-item">
+      <span class="stat-number"><%= stats.total %></span>
+      <span class="stat-label">Movies Following</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number"><%= stats.theatrical %></span>
+      <span class="stat-label">🎭 Theatrical</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number"><%= stats.streaming %></span>
+      <span class="stat-label">📺 Streaming</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number"><%= stats.both %></span>
+      <span class="stat-label">🎬 Both</span>
+    </div>
+  </div>
+
+  <!-- Filter Controls -->
+  <div class="filter-controls">
+    <span class="filter-label">Show:</span>
+    <button class="filter-btn active" data-filter="all">All Movies</button>
+    <button class="filter-btn" data-filter="theatrical">
+      🎭 Theatrical Only
+    </button>
+    <button class="filter-btn" data-filter="streaming">
+      📺 Streaming Only
+    </button>
+    <button class="filter-btn" data-filter="both">🎬 Following Both</button>
+  </div>
+
+  <!-- Movies Grid -->
+  <div class="movies-grid">
+    <% movies.forEach(movie => { %>
+    <div
+      class="movie-card"
+      data-follow-types="<%= movie.followTypes.join(',') %>"
+    >
+      <a href="/movie/<%= movie.id %>" class="movie-link">
+        <% if (movie.posterPath) { %>
+        <img
+          src="https://image.tmdb.org/t/p/w300<%= movie.posterPath %>"
+          alt="<%= movie.title %>"
+          class="movie-poster"
+        />
+        <% } else { %>
+        <div class="movie-poster fallback">
+          <span>No Image</span>
+        </div>
+        <% } %>
+      </a>
+
+      <h3 class="movie-title"><%= movie.title %></h3>
+      <p class="movie-date"><%= movie.releaseDate %></p>
+
+      <div class="follow-status">
+        <div class="follow-types">
+          <% if (movie.followTypes.includes('theatrical')) { %>
+          <span class="follow-badge theatrical">🎭 Theatrical</span>
+          <% } %> <% if (movie.followTypes.includes('streaming')) { %>
+          <span class="follow-badge streaming">📺 Streaming</span>
+          <% } %>
+        </div>
+
+        <div class="follow-actions">
+          <% if (movie.followTypes.includes('theatrical')) { %>
+          <button
+            class="unfollow-btn theatrical"
+            data-movie-id="<%= movie.id %>"
+            data-follow-type="theatrical"
+          >
+            Remove 🎭
+          </button>
+          <% } %> <% if (movie.followTypes.includes('streaming')) { %>
+          <button
+            class="unfollow-btn streaming"
+            data-movie-id="<%= movie.id %>"
+            data-follow-type="streaming"
+          >
+            Remove 📺
+          </button>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+
+  <% } %>
+
+  <script>
+    // Filter functionality
+    const filterBtns = document.querySelectorAll(".filter-btn");
+    const movieCards = document.querySelectorAll(".movie-card");
+
+    filterBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        // Update active state
+        filterBtns.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+
+        const filter = btn.dataset.filter;
+
+        movieCards.forEach((card) => {
+          const followTypes = card.dataset.followTypes.split(",");
+          let show = false;
+
+          switch (filter) {
+            case "all":
+              show = true;
+              break;
+            case "theatrical":
+              show =
+                followTypes.includes("theatrical") &&
+                !followTypes.includes("streaming");
+              break;
+            case "streaming":
+              show =
+                followTypes.includes("streaming") &&
+                !followTypes.includes("theatrical");
+              break;
+            case "both":
+              show =
+                followTypes.includes("theatrical") &&
+                followTypes.includes("streaming");
+              break;
+          }
+
+          card.style.display = show ? "block" : "none";
+        });
+      });
+    });
+
+    // Unfollow functionality
+    document.querySelectorAll(".unfollow-btn").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.preventDefault();
+
+        const movieId = btn.dataset.movieId;
+        const followType = btn.dataset.followType;
+        const card = btn.closest(".movie-card");
+
+        // Add loading state
+        btn.disabled = true;
+        btn.textContent = "Removing...";
+
+        try {
+          const response = await fetch("/unfollow", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              movieId: movieId,
+              followType: followType,
+            }),
+          });
+
+          if (response.ok) {
+            // Update the UI
+            const followTypes = card.dataset.followTypes.split(",");
+            const newFollowTypes = followTypes.filter(
+              (type) => type !== followType
+            );
+            card.dataset.followTypes = newFollowTypes.join(",");
+
+            // Remove the badge and button
+            const badge = card.querySelector(`.follow-badge.${followType}`);
+            if (badge) badge.remove();
+            btn.remove();
+
+            // If no more follows, fade out the card
+            if (newFollowTypes.length === 0) {
+              card.style.opacity = "0.5";
+              card.querySelector(".follow-status").innerHTML =
+                '<p style="color: var(--color-text-muted); font-style: italic; font-size: 0.8rem;">No longer following</p>';
+
+              // Optionally remove the card entirely after a delay
+              setTimeout(() => {
+                card.style.display = "none";
+              }, 2000);
+            }
+
+            // Update stats
+            updateStats();
+          } else {
+            throw new Error("Failed to unfollow");
+          }
+        } catch (error) {
+          console.error("Error unfollowing movie:", error);
+          // Restore button state
+          btn.disabled = false;
+          btn.textContent = `Remove ${
+            followType === "theatrical" ? "🎭" : "📺"
+          }`;
+          alert("Failed to unfollow movie. Please try again.");
+        }
+      });
+    });
+
+    // Update stats after unfollow
+    function updateStats() {
+      const visibleCards = Array.from(movieCards).filter(
+        (card) => card.style.display !== "none" && card.style.opacity !== "0.5"
+      );
+
+      const stats = {
+        total: visibleCards.length,
+        theatrical: 0,
+        streaming: 0,
+        both: 0,
+      };
+
+      visibleCards.forEach((card) => {
+        const followTypes = card.dataset.followTypes
+          .split(",")
+          .filter((t) => t);
+        if (followTypes.includes("theatrical")) stats.theatrical++;
+        if (followTypes.includes("streaming")) stats.streaming++;
+        if (
+          followTypes.includes("theatrical") &&
+          followTypes.includes("streaming")
+        )
+          stats.both++;
+      });
+
+      // Update the DOM
+      document.querySelector(
+        ".stats-summary .stat-item:nth-child(1) .stat-number"
+      ).textContent = stats.total;
+      document.querySelector(
+        ".stats-summary .stat-item:nth-child(2) .stat-number"
+      ).textContent = stats.theatrical;
+      document.querySelector(
+        ".stats-summary .stat-item:nth-child(3) .stat-number"
+      ).textContent = stats.streaming;
+      document.querySelector(
+        ".stats-summary .stat-item:nth-child(4) .stat-number"
+      ).textContent = stats.both;
+    }
+  </script>
 </div>
-<% } %>
