@@ -1,0 +1,137 @@
+/* ============================
+   Utility Classes
+   Reusable utility classes for common patterns
+============================ */
+
+/* Golden theme utilities */
+.golden-bg {
+  background: var(--gradient-gold);
+  color: var(--color-text-dark);
+  font-weight: 600;
+}
+
+.golden-bg:hover {
+  background: var(--gradient-gold-hover);
+  transform: translateY(-1px);
+}
+
+.golden-text {
+  color: var(--color-gold-medium);
+}
+
+.golden-glow:focus {
+  outline: none;
+  box-shadow: var(--shadow-glow);
+}
+
+/* Interactive base pattern */
+.interactive-base {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  border: 1px solid transparent;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.interactive-base:hover {
+  background: var(--gradient-gold);
+  color: var(--color-text-dark);
+  font-weight: 600;
+  transform: translateY(-1px);
+}
+
+/* Input styling utilities */
+.input-styled {
+  background: var(--color-bg-input);
+  border: none;
+  color: var(--color-text-primary);
+  padding: 0.6rem var(--spacing-lg);
+  font-size: 1rem;
+  border-radius: var(--radius-lg);
+  transition: color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.input-styled:focus {
+  outline: none;
+  color: var(--color-gold-medium);
+  box-shadow: var(--shadow-glow);
+}
+
+/* Button base styles */
+.btn-base {
+  padding: 0.6rem var(--spacing-lg);
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all var(--transition-medium);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+}
+
+.btn-base:hover {
+  text-decoration: none;
+}
+
+.btn-golden {
+  background: var(--gradient-gold);
+  color: var(--color-text-dark);
+}
+
+.btn-golden:hover {
+  background: var(--gradient-gold-hover);
+  transform: translateY(-1px);
+}
+
+/* Flexbox utilities */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+/* Loading spinner utility */
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  -webkit-animation: spin 1s linear infinite;
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner.large {
+  width: 24px;
+  height: 24px;
+}
+
+/* Animation utilities */
+.click-pop {
+  -webkit-animation: pop 0.3s ease;
+  animation: pop 0.3s ease;
+}
+
+.dropdown-animate {
+  -webkit-animation: dropdown 0.3s ease;
+  animation: dropdown 0.3s ease;
+}

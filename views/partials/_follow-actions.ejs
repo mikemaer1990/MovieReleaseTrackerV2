@@ -1,0 +1,21 @@
+<div class="follow-actions">
+  <% if (movie.followTypes.includes('theatrical')) { %>
+  <button
+    class="unfollow-btn theatrical"
+    data-movie-id="<%= movie.id %>"
+    data-follow-type="theatrical"
+    aria-label="Stop following theatrical release"
+  >
+    Remove 🎭
+  </button>
+  <% } %> <% if (movie.followTypes.includes('streaming')) { %>
+  <button
+    class="unfollow-btn streaming"
+    data-movie-id="<%= movie.id %>"
+    data-follow-type="streaming"
+    aria-label="Stop following streaming release"
+  >
+    Remove 📺
+  </button>
+  <% } %>
+</div>

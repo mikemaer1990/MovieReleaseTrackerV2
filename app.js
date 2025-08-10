@@ -66,6 +66,9 @@ const movieDetailsRoutes = require("./routes/movie-details");
 const topReleasesRouter = require("./routes/top-releases");
 const checkStreamingDatesRouter = require("./routes/check-streaming-dates");
 
+// ADD: Centralized API routes
+const apiRoutes = require("./routes/api");
+
 app.use("/", indexRoutes);
 app.use("/", searchResultsRouter);
 app.use("/", upcomingRouter);
@@ -75,6 +78,9 @@ app.use("/check-releases", checkReleases);
 app.use("/movie", movieDetailsRoutes);
 app.use("/", topReleasesRouter);
 app.use("/jobs/check-streaming-dates", checkStreamingDatesRouter);
+
+// Mount API routes (this handles /follow and /unfollow)
+app.use("/", apiRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -1,0 +1,26 @@
+/* ============================
+   Main CSS Import File
+   Import all CSS modules in the correct order
+============================ */
+
+/* 1. Variables and design tokens first */
+@import url("./variables.css");
+
+/* 2. Base styles and reset */
+@import url("./base.css");
+
+/* 3. Animations (used by multiple components) */
+@import url("./animations.css");
+
+/* 4. Utility classes (used by multiple components) */
+@import url("./utilities.css");
+
+/* 5. Component-specific styles */
+@import url("./navbar.css");
+@import url("./forms.css");
+@import url("./cards.css");
+@import url("./movie-details.css");
+@import url("./my-movies.css");
+
+/* 6. Miscellaneous components */
+@import url("./misc.css");

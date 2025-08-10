@@ -1,0 +1,88 @@
+/* ============================
+   CSS Custom Properties (Variables)
+   Core design tokens and theming
+============================ */
+
+:root {
+  /* Colors - Base */
+  --color-bg-primary: #121212;
+  --color-bg-secondary: #1a1a1a;
+  --color-bg-tertiary: #1f1f1f;
+  --color-bg-input: #2b2b2b;
+  --color-navbar: #111;
+
+  /* Colors - Text */
+  --color-text-primary: #e0e0e0;
+  --color-text-secondary: #ccc;
+  --color-text-muted: #888;
+  --color-text-dark: #1a1a1a;
+
+  /* Colors - Borders */
+  --color-border: #333;
+  --color-border-light: #222;
+
+  /* Golden Theme Colors */
+  --color-gold-light: #f6e2a0;
+  --color-gold-medium: #f3d96b;
+  --color-gold-dark: #d8b94b;
+  --color-gold-darker: #c4a642;
+
+  /* Gradients */
+  --gradient-gold: linear-gradient(
+    90deg,
+    #f3d96b 0%,
+    #d8b94b 50%,
+    #f3d96b 100%
+  );
+  --gradient-gold-hover: linear-gradient(
+    90deg,
+    #d8b94b 0%,
+    #c4a642 50%,
+    #d8b94b 100%
+  );
+  --gradient-title: linear-gradient(
+    90deg,
+    #f6e2a0 0%,
+    #f3d96b 40%,
+    #d8b94b 70%,
+    #f3d96b 85%,
+    #f6e2a0 100%
+  );
+
+  /* Spacing Scale */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 0.75rem;
+  --spacing-lg: 1rem;
+  --spacing-xl: 1.5rem;
+  --spacing-2xl: 2rem;
+
+  /* Border Radius Scale */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 6px 2px var(--color-gold-medium);
+
+  /* Transitions */
+  --transition-fast: 0.2s ease-in-out;
+  --transition-medium: 0.3s ease;
+
+  /* Typography */
+  --font-primary: "Segoe UI", sans-serif;
+  --font-title: "Orbitron", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+
+  /* Component-specific (Legacy - consider moving to component files) */
+  --card-bg: #1a1a1a;
+  --card-border: #333;
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  --text-light: #f0f0f0;
+  --highlight: #d4af37;
+  --btn-follow-bg: #222;
+  --btn-follow-hover: #d4af37;
+}

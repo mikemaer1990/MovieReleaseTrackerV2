@@ -14,6 +14,12 @@ router.get("/", async (req, res) => {
     const moviesMap = new Map();
 
     followedMovies.forEach((record) => {
+      // Validate required fields
+      if (!record.fields.TMDB_ID || !record.fields.FollowType) {
+        console.warn(`Skipping incomplete record ${record.id}:`, record.fields);
+        return;
+      }
+
       const tmdbId = record.fields.TMDB_ID;
       const followType = record.fields.FollowType.toLowerCase();
 

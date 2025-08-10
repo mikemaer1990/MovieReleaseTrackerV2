@@ -1,0 +1,14 @@
+<div class="follow-types">
+  <% if (movie.followTypes.includes('theatrical')) { %>
+  <span
+    class="follow-badge theatrical"
+    aria-label="Following theatrical release"
+  >
+    🎭 Theatrical
+  </span>
+  <% } %> <% if (movie.followTypes.includes('streaming')) { %>
+  <span class="follow-badge streaming" aria-label="Following streaming release">
+    📺 Streaming
+  </span>
+  <% } %>
+</div>

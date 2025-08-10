@@ -2534,3 +2534,158 @@ input:-webkit-autofill:active {
     padding: 0.2rem 0.4rem;
   }
 }
+/* ============================
+   My Movies Page Improvements
+============================ */
+
+/* Container */
+.my-movies-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-2xl);
+  min-height: calc(100vh - 73px);
+}
+
+.my-movies-page h1 {
+  text-align: center;
+  font-family: var(--font-title);
+  font-size: 2.5rem;
+  font-weight: 900;
+  background: var(--gradient-title);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: var(--spacing-2xl);
+  letter-spacing: 0.1em;
+}
+
+/* Enhanced Empty State */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: var(--spacing-lg);
+  opacity: 0.7;
+}
+
+.empty-state h2 {
+  color: var(--color-text-primary);
+  font-size: 1.5rem;
+  margin-bottom: var(--spacing-md);
+  font-weight: 600;
+}
+
+.empty-state p {
+  color: var(--color-text-secondary);
+  font-size: 1.1rem;
+  margin-bottom: var(--spacing-xl);
+  line-height: 1.5;
+}
+
+/* No Follow Message */
+.no-follow-message {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-size: 0.8rem;
+  margin: 0;
+  text-align: center;
+  padding: var(--spacing-sm);
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  -webkit-animation: spin 1s linear infinite;
+  animation: spin 1s linear infinite;
+  margin-right: var(--spacing-xs);
+}
+
+/* Notification Animations */
+@-webkit-keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@-webkit-keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Enhanced Responsive Design */
+@media (max-width: 768px) {
+  .my-movies-container {
+    padding: var(--spacing-lg);
+  }
+
+  .my-movies-page h1 {
+    font-size: 2rem;
+  }
+
+  .empty-state {
+    padding: 3rem 1.5rem;
+  }
+
+  .empty-state-icon {
+    font-size: 3rem;
+  }
+}
+
+@media (max-width: 500px) {
+  .my-movies-container {
+    padding: var(--spacing-md);
+  }
+
+  .my-movies-page h1 {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-xl);
+  }
+
+  .empty-state {
+    padding: 2rem 1rem;
+  }
+}
