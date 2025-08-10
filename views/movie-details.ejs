@@ -102,7 +102,7 @@
               <span>✓</span> Following
             </button>
           <% } else { %>
-            <button class="follow-action-btn" data-movie-id="<%= movie.id %>">
+            <button class="follow-action-btn" data-movie-id="<%= movie.id %>"data-title="<%= movie.title.replace(/"/g, '&quot;') %>"data-poster-path="<%= movie.poster_path %>">
               <span>+</span> Follow Movie
             </button>
           <% } %>
@@ -179,6 +179,8 @@ document.addEventListener('DOMContentLoaded', function() {
   if (followBtn) {
     followBtn.addEventListener('click', async function() {
       const movieId = this.dataset.movieId;
+      const movieTitle = this.dataset.title;         // <--- Added
+      const moviePosterPath = this.dataset.posterPath; // <--- Added
       const button = this;
       
       // Add loading state
@@ -187,13 +189,17 @@ document.addEventListener('DOMContentLoaded', function() {
       button.disabled = true;
       
       try {
-        const response = await fetch(`/movie/follow/${movieId}`, {
+        const response = await fetch('/follow', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            movieId: movieId,
+            title: movieTitle,
+            posterPath: moviePosterPath,
+            followType: 'both', // or 'theatrical', 'streaming'
+          }),
         });
-        
+
         if (response.ok) {
           // Refresh page to show updated state
           window.location.reload();
@@ -208,6 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+
   
   if (unfollowBtn) {
     unfollowBtn.addEventListener('click', async function() {
@@ -220,12 +227,12 @@ document.addEventListener('DOMContentLoaded', function() {
       button.disabled = true;
       
       try {
-        const response = await fetch(`/movie/unfollow/${movieId}`, {
+        const response = await fetch('/unfollow', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ movieId }),
         });
+
         
         if (response.ok) {
           // Refresh page to show updated state

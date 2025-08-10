@@ -18,15 +18,8 @@
       </a>
       <h3><%= movie.title %></h3>
       <p><%= movie.displayDate %></p>
-
-      <% if (user) { %> <%- include('partials/_followButton', { movie: movie,
-      followedMovieIds: followedMovieIds }) %> <% } else { %>
-      <p>
-        <a href="/auth/login?redirect=<%= encodeURIComponent('/upcoming') %>">
-          Login to follow
-        </a>
-      </p>
-      <% } %>
+      <%- include('partials/_follow-button', { user, movie, followedMovieIds,
+      query: query || '' }) %>
     </div>
     <% }); %>
   </div>

@@ -3,11 +3,7 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 const { getStreamingReleaseDate } = require("../services/tmdb");
-const {
-  getFollowedMoviesByUserId,
-  followMovie,
-  unfollowMovie,
-} = require("../services/airtable");
+const { getFollowedMoviesByUserId } = require("../services/airtable");
 
 // Constants
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";

@@ -2,11 +2,7 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 const { getStreamingReleaseDate } = require("../services/tmdb");
-const {
-  getFollowedMoviesByUserId,
-  followMovie,
-  unfollowMovie,
-} = require("../services/airtable");
+const { getFollowedMoviesByUserId } = require("../services/airtable");
 const { toUtcMidnight } = require("../utils/dateHelpers");
 const { sortByRelevanceAndPopularity } = require("../utils/searchHelpers");
 

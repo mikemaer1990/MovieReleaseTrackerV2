@@ -2,11 +2,7 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 const { getStreamingReleaseDate } = require("../services/tmdb");
-const {
-  getFollowedMoviesByUserId,
-  followMovie,
-  unfollowMovie,
-} = require("../services/airtable");
+const { getFollowedMoviesByUserId } = require("../services/airtable");
 const { toUtcMidnight } = require("../utils/dateHelpers");
 
 router.get("/upcoming", async (req, res) => {
@@ -123,6 +119,7 @@ router.get("/upcoming", async (req, res) => {
       followMessage,
       currentPage,
       totalPages,
+      query: "",
     });
   } catch (err) {
     console.error("TMDB upcoming movies error:", err);

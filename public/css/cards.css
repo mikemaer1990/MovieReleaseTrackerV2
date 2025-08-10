@@ -212,6 +212,45 @@
   outline: none;
 }
 
+/* Scope styles to only this partial */
+.follow-action-partial {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.follow-action-partial .follow-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #f4c542; /* gold */
+  color: #000;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.follow-action-partial .follow-btn i {
+  font-size: 1rem;
+}
+
+.follow-action-partial .follow-btn:hover {
+  background-color: #e0b83f;
+  transform: translateY(-1px);
+}
+
+.follow-action-partial .follow-btn.login {
+  background-color: #555;
+  color: #fff;
+}
+
+.follow-action-partial .follow-btn.login:hover {
+  background-color: #777;
+}
+
 /* Follow Message */
 .follow-msg {
   text-align: center;
