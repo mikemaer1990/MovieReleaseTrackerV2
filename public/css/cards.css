@@ -463,9 +463,12 @@
 }
 
 @media (max-width: 360px) {
+  .grid-container {
+    padding: 0;
+  }
   .results-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    gap: 8px;
     padding: 0 8px;
     max-width: 100%;
     margin: 0 auto;
