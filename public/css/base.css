@@ -1,0 +1,54 @@
+/* ============================
+   Base Styles and Global Reset
+   Foundation styles for the entire application
+============================ */
+
+/* Base body styling */
+body {
+  font-family: var(--font-primary);
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  text-align: center;
+}
+
+/* Input autofill styling fixes */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px var(--color-bg-secondary) inset !important;
+  -webkit-text-fill-color: var(--color-text-secondary) !important;
+}
+
+/* For focused state to match :focus-within styling */
+.nav-search:focus-within input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 30px #222 inset !important;
+  -webkit-text-fill-color: var(--color-gold-medium) !important;
+}
+
+/* Accessibility classes */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* Global error styling */
+.form-error {
+  color: #e74c3c;
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Global link styling */
+.register-link {
+  color: var(--color-gold-medium);
+  margin-top: var(--spacing-lg);
+  display: inline-block;
+}

@@ -37,45 +37,22 @@
 <% if ((movies || []).length > 0) { %>
   <div class="grid-container">
     <div class="results-grid">
-
       <% movies.forEach(movie => { %>
-        <div class="movie-card">
-          <a href="/movie/<%= movie.id %>" class="movie-link">
-          <img
-            src="<%= movie.poster_path ? 'https://image.tmdb.org/t/p/w300' + movie.poster_path : '/images/funny-fallback.png' %>"
-            alt="<%= movie.title %>"
-            class="<%= movie.poster_path ? 'movie-poster' : 'movie-poster fallback' %>"
-          />
-          </a>
-          <h3><%= movie.title %></h3>
-          <p><%= movie.displayDate %></p>
-          <% if (movie.rating && movie.rating > 0) { %>
-            <div class="movie-rating">
-              ⭐ <%= movie.rating.toFixed(1) %>/10
-            </div>
-          <% } %>
-          
-          <!-- No follow buttons for already released movies -->
-        </div>
+        <%- include('partials/_results-movie-card', { 
+          movie, 
+          showFollowButton: false 
+        }) %>
       <% }); %>
-
     </div>
   </div>
 
-  <!-- Pagination -->
-<% if (hasPrevPage || hasNextPage) { %>
-  <div class="pagination">
-    <% if (hasPrevPage) { %>
-      <a href="/top-releases?page=<%= currentPage - 1 %><%= sortBy ? '&sort=' + sortBy : '' %><%= genre ? '&genre=' + genre : '' %>" class="pagination-btn">← Previous</a>
-    <% } %>
-    
-    <span class="pagination-info">Page <%= currentPage %></span>
-    
-    <% if (hasNextPage) { %>
-      <a href="/top-releases?page=<%= currentPage + 1 %><%= sortBy ? '&sort=' + sortBy : '' %><%= genre ? '&genre=' + genre : '' %>" class="pagination-btn">Next →</a>
-    <% } %>
-  </div>
-<% } %>
+  <%- include('partials/_pagination-releases', { 
+    hasPrevPage, 
+    hasNextPage, 
+    currentPage,
+    sortBy,
+    genre
+  }) %>
 
 <% } else { %>
   <p style="text-align:center;">No top releases found for the selected criteria.</p>

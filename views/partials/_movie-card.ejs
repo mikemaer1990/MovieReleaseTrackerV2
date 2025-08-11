@@ -1,0 +1,34 @@
+<div
+  class="movie-card"
+  data-follow-types="<%= movie.followTypes.join(',') %>"
+  role="gridcell"
+>
+  <a
+    href="/movie/<%= movie.id %>"
+    class="movie-link"
+    aria-label="View details for <%= movie.title %>"
+  >
+    <% if (movie.posterPath) { %>
+    <img
+      src="https://image.tmdb.org/t/p/w300<%= movie.posterPath %>"
+      alt="<%= movie.title %> poster"
+      class="movie-poster"
+      loading="lazy"
+    />
+    <% } else { %>
+    <div class="movie-poster fallback" aria-label="No poster available">
+      <span>No Image</span>
+    </div>
+    <% } %>
+  </a>
+
+  <h3 class="movie-title"><%= movie.title %></h3>
+  <p class="movie-date">
+    <time datetime="<%= movie.releaseDate %>"><%= movie.releaseDate %></time>
+  </p>
+
+  <div class="follow-status">
+    <%- include('_follow-badges', { movie }) %> <%- include('_follow-actions', {
+    movie }) %>
+  </div>
+</div>

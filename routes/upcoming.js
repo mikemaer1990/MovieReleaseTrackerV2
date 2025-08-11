@@ -2,11 +2,7 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 const { getStreamingReleaseDate } = require("../services/tmdb");
-const {
-  getFollowedMoviesByUserId,
-  followMovie,
-  unfollowMovie,
-} = require("../services/airtable");
+const { getFollowedMoviesByUserId } = require("../services/airtable");
 const { toUtcMidnight } = require("../utils/dateHelpers");
 
 router.get("/upcoming", async (req, res) => {
@@ -19,9 +15,8 @@ router.get("/upcoming", async (req, res) => {
   try {
     let collectedMovies = [];
     let tmdbPage = 1;
-    let totalTmdbPages = 1; // will update after first fetch
+    let totalTmdbPages = 1;
 
-    // Fetch TMDB pages until we have maxFilteredMovies filtered movies or run out of TMDB pages
     while (
       collectedMovies.length < maxFilteredMovies &&
       tmdbPage <= totalTmdbPages
@@ -79,7 +74,6 @@ router.get("/upcoming", async (req, res) => {
         })
       );
 
-      // Filter and exclude duplicates
       const newFiltered = processedMovies.filter(
         (movie) =>
           movie.canFollow &&
@@ -90,21 +84,12 @@ router.get("/upcoming", async (req, res) => {
       tmdbPage++;
     }
 
-    // Paginate locally
     const totalPages = Math.ceil(collectedMovies.length / moviesPerPage);
-
-    // If requested page exceeds totalPages, show empty or last page
     const currentPage = uiPage > totalPages ? totalPages : uiPage;
     const startIndex = (currentPage - 1) * moviesPerPage;
     const pageMovies = collectedMovies.slice(
       startIndex,
       startIndex + moviesPerPage
-    );
-
-    console.log(
-      `TMDB pages fetched: ${tmdbPage - 1}, filtered movies collected: ${
-        collectedMovies.length
-      }`
     );
 
     let user = null;
@@ -134,86 +119,11 @@ router.get("/upcoming", async (req, res) => {
       followMessage,
       currentPage,
       totalPages,
+      query: "",
     });
   } catch (err) {
     console.error("TMDB upcoming movies error:", err);
     res.status(500).send("Something went wrong");
-  }
-});
-
-// Your existing follow/unfollow routes here unchanged...
-
-router.post("/follow", async (req, res) => {
-  if (!req.session.userId) {
-    return res.status(401).json({
-      success: false,
-      message: "Not logged in",
-    });
-  }
-
-  const { movieId, title, posterPath } = req.body;
-
-  try {
-    const releaseDate = await getStreamingReleaseDate(movieId);
-
-    if (!releaseDate) {
-      return res.status(400).json({
-        success: false,
-        message: "Could not find streaming or DVD release date",
-      });
-    }
-
-    await followMovie(req.session.airtableRecordId, {
-      TMDB_ID: Number(movieId),
-      Title: title,
-      ReleaseDate: releaseDate,
-      PosterPath: posterPath,
-      User: [req.session.airtableRecordId],
-      UserID: req.session.userId,
-    });
-
-    res.json({
-      success: true,
-      message: `You are now following "${title}"`,
-    });
-  } catch (error) {
-    console.error("Error following movie:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to follow movie",
-    });
-  }
-});
-
-router.post("/unfollow", async (req, res) => {
-  if (!req.session.userId) {
-    return res.status(401).json({
-      success: false,
-      message: "Not logged in",
-    });
-  }
-
-  const { movieId } = req.body;
-
-  try {
-    const success = await unfollowMovie(req.session.userId, Number(movieId));
-    if (success) {
-      res.json({
-        success: true,
-        message: "Movie unfollowed successfully",
-      });
-    } else {
-      res.status(404).json({
-        success: false,
-        message: "Movie not found for this user",
-      });
-    }
-  } catch (error) {
-    console.error("Error unfollowing movie:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to unfollow movie",
-    });
   }
 });
 

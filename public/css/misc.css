@@ -1,0 +1,54 @@
+/* ============================
+   Miscellaneous Components
+   Error pages, titles, and other standalone components
+============================ */
+
+/* Page Titles */
+.title {
+  margin-top: var(--spacing-2xl);
+  font-size: 2rem;
+}
+
+/* Error Pages */
+.error-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 2rem;
+}
+
+.error-content {
+  max-width: 500px;
+}
+
+.error-code {
+  font-size: 6rem;
+  font-weight: bold;
+  color: #666;
+  margin-bottom: 1rem;
+  font-family: var(--font-title);
+}
+
+.error-actions {
+  margin: 2rem 0;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.helpful-links {
+  margin-top: 2rem;
+  opacity: 0.8;
+}
+
+.helpful-links ul {
+  list-style: none;
+  padding: 0;
+}
+
+.helpful-links li {
+  margin: 0.5rem 0;
+}
