@@ -1,0 +1,21 @@
+<% if (hasPrevPage || hasNextPage) { %>
+<div class="pagination">
+  <% if (hasPrevPage) { %>
+  <a
+    href="/top-releases?page=<%= currentPage - 1 %><%= sortBy ? '&sort=' + sortBy : '' %><%= genre ? '&genre=' + genre : '' %>"
+    class="pagination-btn"
+    >← Previous</a
+  >
+  <% } %>
+
+  <span class="pagination-info">Page <%= currentPage %></span>
+
+  <% if (hasNextPage) { %>
+  <a
+    href="/top-releases?page=<%= currentPage + 1 %><%= sortBy ? '&sort=' + sortBy : '' %><%= genre ? '&genre=' + genre : '' %>"
+    class="pagination-btn"
+    >Next →</a
+  >
+  <% } %>
+</div>
+<% } %>

@@ -1,0 +1,19 @@
+<% if (totalPages > 1) { %>
+<div class="pagination">
+  <% if (currentPage > 1) { %>
+  <a href="/upcoming?page=<%= currentPage - 1 %>" class="pagination-btn"
+    >← Previous</a
+  >
+  <% } %>
+
+  <span class="pagination-info"
+    >Page <%= currentPage %> of <%= totalPages %></span
+  >
+
+  <% if (currentPage < totalPages) { %>
+  <a href="/upcoming?page=<%= currentPage + 1 %>" class="pagination-btn"
+    >Next →</a
+  >
+  <% } %>
+</div>
+<% } %>
