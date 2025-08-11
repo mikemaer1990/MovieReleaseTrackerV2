@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { getStreamingReleaseDate } = require("../services/tmdb");
 const { followMovie, unfollowMovie } = require("../services/airtable");
+const { clearCache } = require("../services/cache");
 
 const validFollowTypes = ["theatrical", "streaming", "both"];
 
@@ -43,13 +44,16 @@ router.post("/follow", async (req, res) => {
           PosterPath: posterPath,
           User: [req.session.airtableRecordId],
           UserID: req.session.userId,
-          FollowType: type, // This ensures FollowType is always set
+          FollowType: type,
           StreamingDateAvailable: type === "streaming" && Boolean(releaseDate),
           StreamingReleaseDate:
             type === "streaming" ? releaseDate || null : null,
         });
       })
     );
+
+    // Clear user's followed movies cache after successful follow
+    clearCache(`followedMovies_${req.session.userId}`);
 
     res.json({
       success: true,
@@ -83,6 +87,9 @@ router.post("/unfollow", async (req, res) => {
     );
 
     if (success) {
+      // Clear user's followed movies cache after successful unfollow
+      clearCache(`followedMovies_${req.session.userId}`);
+
       res.json({
         success: true,
         message: `Movie unfollowed successfully (${followType || "all types"})`,

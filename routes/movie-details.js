@@ -4,7 +4,8 @@ const router = express.Router();
 const axios = require("axios");
 const { getStreamingReleaseDate } = require("../services/tmdb");
 const { getFollowedMoviesByUserId } = require("../services/airtable");
-
+// Caching
+const { getCachedData, setCachedData } = require("../services/cache");
 // Constants
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const CAST_LIMIT = 10;
@@ -43,14 +44,40 @@ function findDirector(crew) {
   return crew?.find((member) => member.job === "Director") || null;
 }
 
+// OLD VERSION
 // Helper function to check if user is following movie
+// async function checkIfUserFollowing(userId, movieId) {
+//   if (!userId) return false;
+
+//   const followedRecords = await getFollowedMoviesByUserId(userId);
+//   const followedMovieIds = followedRecords.map((record) =>
+//     Number(record.fields.TMDB_ID)
+//   );
+//   return followedMovieIds.includes(Number(movieId));
+// }
+
+// Fixed checkIfUserFollowing function for movie-details.js
+
 async function checkIfUserFollowing(userId, movieId) {
   if (!userId) return false;
 
-  const followedRecords = await getFollowedMoviesByUserId(userId);
-  const followedMovieIds = followedRecords.map((record) =>
-    Number(record.fields.TMDB_ID)
-  );
+  const cacheKey = `followedMovies_${userId}`;
+  let followedRecords = getCachedData(cacheKey);
+
+  if (!followedRecords) {
+    // Not cached - fetch from Airtable
+    followedRecords = await getFollowedMoviesByUserId(userId);
+
+    // Cache the original Airtable records (don't transform them!)
+    setCachedData(cacheKey, followedRecords, 600);
+  }
+
+  // Extract movie IDs from the original Airtable structure
+  const followedMovieIds = followedRecords
+    .filter((record) => record && record.fields && record.fields.TMDB_ID)
+    .map((record) => Number(record.fields.TMDB_ID));
+
+  // Check if movieId is in user's followed movies
   return followedMovieIds.includes(Number(movieId));
 }
 

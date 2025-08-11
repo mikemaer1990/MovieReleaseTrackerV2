@@ -5,7 +5,8 @@ const { getStreamingReleaseDate } = require("../services/tmdb");
 const { getFollowedMoviesByUserId } = require("../services/airtable");
 const { toUtcMidnight } = require("../utils/dateHelpers");
 const { sortByRelevanceAndPopularity } = require("../utils/searchHelpers");
-
+// Caching
+const { getCachedData, setCachedData } = require("../services/cache");
 router.get("/search", async (req, res) => {
   const query = req.query.query;
   const followMessage = req.query.followMessage || null;
@@ -96,9 +97,13 @@ router.get("/search", async (req, res) => {
         airtableRecordId: req.session.airtableRecordId,
       };
 
-      const followedRecords = await getFollowedMoviesByUserId(
-        req.session.userId
-      );
+      const cacheKey = `followedMovies_${req.session.userId}`;
+      let followedRecords = getCachedData(cacheKey);
+      if (!followedRecords) {
+        followedRecords = await getFollowedMoviesByUserId(req.session.userId);
+        setCachedData(cacheKey, followedRecords, 600); // cache for 10 mins
+      }
+
       followedMovieIds = followedRecords.map((record) =>
         Number(record.fields.TMDB_ID)
       );

@@ -4,6 +4,8 @@ const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 const AIRTABLE_USERS_TABLE = "Users"; // your users table
 const AIRTABLE_FOLLOWED_MOVIES_TABLE = "FollowedMovies"; // your followed movies table
 const PAT = process.env.AIRTABLE_API_KEY; // Your Personal Access Token
+// Caching - only use NodeCache implementation
+const { clearCache, getCachedData, setCachedData } = require("./cache");
 
 const airtableAxios = axios.create({
   baseURL: `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/`,
@@ -44,16 +46,33 @@ async function createUser(userData) {
   }
 }
 
-// Get followed movies for a user by their Airtable record ID
+/**
+ * Get followed movies for a user by their user ID
+ * Uses NodeCache for caching to improve performance
+ */
 async function getFollowedMoviesByUserId(userId) {
+  const cacheKey = `followedMovies_${userId}`;
+
+  // Try to get from cache first
+  const cachedData = getCachedData(cacheKey);
+  if (cachedData) {
+    // Return cached response if available
+    return cachedData;
+  }
+
+  // No cached data or cache expired — fetch fresh from Airtable
   try {
     const filterFormula = `{UserID} = '${userId}'`;
     const response = await airtableAxios.get(AIRTABLE_FOLLOWED_MOVIES_TABLE, {
-      params: {
-        filterByFormula: filterFormula,
-      },
+      params: { filterByFormula: filterFormula },
     });
-    return response.data.records;
+
+    const records = response.data.records;
+
+    // Cache the fresh data for future calls
+    setCachedData(cacheKey, records);
+
+    return records;
   } catch (error) {
     console.error(
       "Airtable getFollowedMoviesByUserId error:",
@@ -63,12 +82,16 @@ async function getFollowedMoviesByUserId(userId) {
   }
 }
 
+/**
+ * Follow a movie - creates a new followed movie record
+ * Clears the user's cache after successful operation
+ */
 async function followMovie(airtableUserRecordId, movieData) {
   try {
     const response = await airtableAxios.post("FollowedMovies", {
       fields: {
         ...movieData,
-        FollowType: movieData.FollowType, // 'Theatrical' or 'Streaming'
+        FollowType: movieData.FollowType,
         StreamingDateAvailable:
           movieData.FollowType === "Streaming" &&
           Boolean(movieData.ReleaseDate),
@@ -81,6 +104,10 @@ async function followMovie(airtableUserRecordId, movieData) {
         PosterPath: movieData.PosterPath,
       },
     });
+
+    // Clear cache after successful follow
+    clearCache(`followedMovies_${movieData.UserID}`);
+
     return response.data;
   } catch (error) {
     console.error(
@@ -91,6 +118,10 @@ async function followMovie(airtableUserRecordId, movieData) {
   }
 }
 
+/**
+ * Unfollow a movie - removes followed movie record(s)
+ * Clears the user's cache after successful operation
+ */
 async function unfollowMovie(userId, tmdbId, followType = null) {
   try {
     let filterFormula;
@@ -122,6 +153,7 @@ async function unfollowMovie(userId, tmdbId, followType = null) {
     });
 
     const records = response.data.records;
+
     if (records.length === 0) return false;
 
     await Promise.all(
@@ -129,6 +161,9 @@ async function unfollowMovie(userId, tmdbId, followType = null) {
         airtableAxios.delete(`FollowedMovies/${record.id}`)
       )
     );
+
+    // Clear cache after successfully deleting follow records
+    clearCache(`followedMovies_${userId}`);
 
     return true;
   } catch (error) {
