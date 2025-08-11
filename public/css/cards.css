@@ -506,7 +506,7 @@
     box-sizing: border-box;
   }
 
-  .movie-card .unfollow-button {
-    padding-left: 1.75rem;
+  .movie-card .unfollow-button::before {
+    content: "";
   }
 }
