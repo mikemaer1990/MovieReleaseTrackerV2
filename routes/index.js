@@ -2,10 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 router.get("/", (req, res) => {
-  res.render("home", {
-    // render home.ejs
-    title: "Home",
-  });
+  res.render("home", { title: "Movie Release Tracker" });
 });
 
 module.exports = router;
