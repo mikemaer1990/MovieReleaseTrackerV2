@@ -403,17 +403,23 @@
 
   .filter-row {
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
     gap: var(--spacing-lg);
   }
 
   .filter-group {
     min-width: unset;
-    width: 100%;
+    width: auto;
+    max-width: 280px;
+    justify-content: center;
+  }
+
+  .filter-select {
+    min-width: 140px;
   }
 
   .filter-button {
-    width: 100%;
+    max-width: 280px;
     padding: var(--spacing-md);
   }
 

@@ -2,13 +2,12 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 const { getStreamingReleaseDate } = require("../services/tmdb");
-const { toUtcMidnight } = require("../utils/dateHelpers");
+const { toUtcMidnight } = require("../utils/date-helpers");
 
 const RESULTS_PER_PAGE = 20; // Consistent results per page
 
 router.get("/top-releases", async (req, res) => {
   const followMessage = req.query.followMessage || null;
-  const page = parseInt(req.query.page) || 1;
   const sortBy = req.query.sort || "popularity";
   const genre = req.query.genre || null;
 
@@ -20,22 +19,44 @@ router.get("/top-releases", async (req, res) => {
     let allValidMovies = [];
     let tmdbPage = 1;
 
-    // Calculate how many movies we need (current page + some buffer for next page)
-    const moviesNeeded = page * RESULTS_PER_PAGE + RESULTS_PER_PAGE; // Extra page for "next" detection
-    const maxPagesToFetch = Math.min(10, Math.ceil(moviesNeeded / 5)); // Assume ~5 valid movies per TMDB page on average
+    // Load initial batch only (first 20 movies)
+    const initialLimit = RESULTS_PER_PAGE;
+    const maxPagesToFetch = 3; // Fetch fewer pages for initial load
 
-    // Keep fetching until we have enough valid movies
+    // Map our sort options to TMDB's sort_by parameter
+    let tmdbSortBy = "popularity.desc";
+    switch (sortBy) {
+      case "rating":
+        tmdbSortBy = "vote_average.desc";
+        break;
+      case "newest":
+        tmdbSortBy = "release_date.desc";
+        break;
+      case "oldest":
+        tmdbSortBy = "release_date.asc";
+        break;
+      case "popularity":
+      default:
+        tmdbSortBy = "popularity.desc";
+        break;
+    }
+
+    // Keep fetching until we have enough valid movies for initial load
     while (
-      allValidMovies.length < moviesNeeded &&
+      allValidMovies.length < initialLimit &&
       tmdbPage <= maxPagesToFetch
     ) {
       const response = await axios.get(
-        `https://api.themoviedb.org/3/movie/popular`,
+        `https://api.themoviedb.org/3/discover/movie`,
         {
           params: {
             api_key: process.env.TMDB_API_KEY,
             page: tmdbPage,
             region: "US",
+            sort_by: tmdbSortBy,
+            "primary_release_date.gte": sixMonthsAgo.toISOString().split('T')[0],
+            "primary_release_date.lte": now.toISOString().split('T')[0],
+            with_release_type: "4|5", // Digital and Physical releases
           },
         }
       );
@@ -68,11 +89,7 @@ router.get("/top-releases", async (req, res) => {
             ? toUtcMidnight(theatricalDate)
             : null;
 
-          // Only include movies that have streaming dates and are recently available
-          const hasRecentStreaming =
-            streamingDateMidnight &&
-            streamingDateMidnight <= now &&
-            streamingDateMidnight >= sixMonthsAgo;
+          const hasRecentStreaming = streamingDateMidnight || theatricalDateMidnight;
 
           let displayDate = "Available Now";
           if (streamingDateMidnight) {
@@ -102,45 +119,43 @@ router.get("/top-releases", async (req, res) => {
       tmdbPage++;
     }
 
-    // Apply sorting to all movies
+    // Apply sorting to all movies with secondary sort key for consistency
     switch (sortBy) {
       case "newest":
         allValidMovies.sort((a, b) => {
-          if (!a.streamingDate && !b.streamingDate) return 0;
+          if (!a.streamingDate && !b.streamingDate) return a.id - b.id;
           if (!a.streamingDate) return 1;
           if (!b.streamingDate) return -1;
-          return b.streamingDate - a.streamingDate;
+          const dateCompare = b.streamingDate - a.streamingDate;
+          return dateCompare !== 0 ? dateCompare : a.id - b.id;
         });
         break;
       case "oldest":
         allValidMovies.sort((a, b) => {
-          if (!a.streamingDate && !b.streamingDate) return 0;
+          if (!a.streamingDate && !b.streamingDate) return a.id - b.id;
           if (!a.streamingDate) return 1;
           if (!b.streamingDate) return -1;
-          return a.streamingDate - b.streamingDate;
+          const dateCompare = a.streamingDate - b.streamingDate;
+          return dateCompare !== 0 ? dateCompare : a.id - b.id;
         });
         break;
       case "rating":
-        allValidMovies.sort((a, b) => b.rating - a.rating);
+        allValidMovies.sort((a, b) => {
+          const ratingCompare = b.rating - a.rating;
+          return ratingCompare !== 0 ? ratingCompare : a.id - b.id;
+        });
         break;
       case "popularity":
       default:
-        allValidMovies.sort((a, b) => b.popularity - a.popularity);
+        allValidMovies.sort((a, b) => {
+          const popularityCompare = b.popularity - a.popularity;
+          return popularityCompare !== 0 ? popularityCompare : a.id - b.id;
+        });
         break;
     }
 
-    // Paginate the results
-    const startIndex = (page - 1) * RESULTS_PER_PAGE;
-    const endIndex = startIndex + RESULTS_PER_PAGE;
-    const paginatedMovies = allValidMovies.slice(startIndex, endIndex);
-
-    // Determine if there's a next page and total pages
-    const hasNextPage = allValidMovies.length > endIndex;
-    const hasPrevPage = page > 1;
-
-    // For total pages, we can only be certain about what we've seen
-    // Show current page + 1 if we have next page data, otherwise just current page
-    const totalPages = hasNextPage ? page + 1 : page;
+    // Take only the initial batch
+    const initialMovies = allValidMovies.slice(0, initialLimit);
 
     // Get user info for display purposes only
     let user = null;
@@ -166,16 +181,13 @@ router.get("/top-releases", async (req, res) => {
     res.locals.page = "top-releases";
     res.render("top-releases", {
       title: "Top Streaming Releases - Movie Tracker",
-      movies: paginatedMovies,
+      movies: initialMovies,
       user,
       followMessage,
-      currentPage: page,
-      totalPages: totalPages,
-      hasNextPage: hasNextPage,
-      hasPrevPage: hasPrevPage,
       sortBy,
       genre,
       genres,
+      initialLoad: true, // Flag to indicate this is initial load
       sortOptions: [
         { value: "popularity", label: "Most Popular" },
         { value: "rating", label: "Highest Rated" },

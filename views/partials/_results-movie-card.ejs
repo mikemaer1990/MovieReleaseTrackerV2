@@ -1,4 +1,5 @@
 <div class="movie-card">
+  <!-- Movie Poster (always visible) -->
   <a href="/movie/<%= movie.id %>" class="movie-link">
     <img
       src="<%= movie.poster_path ? 'https://image.tmdb.org/t/p/w300' + movie.poster_path : '/images/funny-fallback.png' %>"
@@ -6,25 +7,43 @@
       class="<%= movie.poster_path ? 'movie-poster' : 'movie-poster fallback' %>"
     />
   </a>
-  <h3><%= movie.title %></h3>
-  <div class="movie-dates">
-    <% if (movie.release_date) { %>
-    <div class="date-item theatrical">
-      🎭 <%= new Date(movie.release_date).toLocaleDateString('en-US', { year:
-      'numeric', month: 'short', day: 'numeric' }) %>
+
+  <!-- Overlay (appears on hover) -->
+  <div class="movie-overlay">
+    <!-- Top section - Title, dates, rating -->
+    <div class="overlay-top">
+      <div class="overlay-title"><%= movie.title %></div>
+
+      <div class="overlay-dates">
+        <% if (movie.release_date) { %>
+        <div class="date-item theatrical">
+          🎭 <%= new Date(movie.release_date).toLocaleDateString('en-US', {
+          year: 'numeric', month: 'short', day: 'numeric' }) %>
+        </div>
+        <% } %> <% if (movie.streamingDateRaw) { %>
+        <div class="date-item streaming">
+          📺 <%= new Date(movie.streamingDateRaw).toLocaleDateString('en-US', {
+          year: 'numeric', month: 'short', day: 'numeric' }) %>
+        </div>
+        <% } %> <% if (!movie.release_date && !movie.streamingDateRaw) { %>
+        <div class="date-item no-date">Release date TBA</div>
+        <% } %>
+      </div>
+
+      <% if (movie.rating && movie.rating > 0) { %>
+      <div class="overlay-rating">⭐ <%= movie.rating.toFixed(1) %>/10</div>
+      <% } else { %>
+      <div class="overlay-rating">Not yet rated</div>
+      <% } %>
     </div>
-    <% } %> <% if (movie.streamingDateRaw) { %>
-    <div class="date-item streaming">
-      📺 <%= new Date(movie.streamingDateRaw).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric' }) %>
+
+    <!-- Bottom section - Follow button -->
+    <% if (showFollowButton !== false) { %>
+    <div class="overlay-actions">
+      <%- include('_follow-button', { user, movie, followedMovieIds, query:
+      query || '' }) %>
     </div>
-    <% } %> <% if (!movie.release_date && !movie.streamingDateRaw) { %>
-    <div class="date-item no-date">Release date TBA</div>
     <% } %>
   </div>
-
-  <% if (movie.rating && movie.rating > 0) { %>
-  <div class="movie-rating">⭐ <%= movie.rating.toFixed(1) %>/10</div>
-  <% } %> <% if (showFollowButton !== false) { %> <%- include('_follow-button',
-  { user, movie, followedMovieIds, query: query || '' }) %> <% } %>
 </div>
+<script src="/js/movie-cards.js"></script>

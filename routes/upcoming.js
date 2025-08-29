@@ -3,14 +3,13 @@ const router = express.Router();
 const axios = require("axios");
 const { getStreamingReleaseDate } = require("../services/tmdb");
 const { getFollowedMoviesByUserId } = require("../services/airtable");
-const { toUtcMidnight } = require("../utils/dateHelpers");
+const { toUtcMidnight } = require("../utils/date-helpers");
 // Caching
 const { getCachedData, setCachedData } = require("../services/cache");
 router.get("/upcoming", async (req, res) => {
   const followMessage = req.query.followMessage || null;
-  const uiPage = parseInt(req.query.page) || 1;
-  const moviesPerPage = 15;
-  const maxFilteredMovies = moviesPerPage * 5; // max 5 UI pages of filtered movies
+  const moviesPerPage = 20;
+  const initialMoviesToLoad = moviesPerPage; // Load only first batch initially
   const now = toUtcMidnight(new Date());
 
   try {
@@ -18,9 +17,10 @@ router.get("/upcoming", async (req, res) => {
     let tmdbPage = 1;
     let totalTmdbPages = 1;
 
+    // Collect movies until we have enough for initial load
     while (
-      collectedMovies.length < maxFilteredMovies &&
-      tmdbPage <= totalTmdbPages
+      collectedMovies.length < moviesPerPage &&
+      tmdbPage <= 5 // Allow up to 5 pages for initial collection
     ) {
       const response = await axios.get(
         `https://api.themoviedb.org/3/movie/upcoming`,
@@ -83,15 +83,15 @@ router.get("/upcoming", async (req, res) => {
 
       collectedMovies.push(...newFiltered);
       tmdbPage++;
+
+      if (tmdbPage > totalTmdbPages) break;
     }
 
-    const totalPages = Math.ceil(collectedMovies.length / moviesPerPage);
-    const currentPage = uiPage > totalPages ? totalPages : uiPage;
-    const startIndex = (currentPage - 1) * moviesPerPage;
-    const pageMovies = collectedMovies.slice(
-      startIndex,
-      startIndex + moviesPerPage
-    );
+    // Take exactly the number of movies we want
+    const pageMovies = collectedMovies.slice(0, moviesPerPage);
+    
+    // Store which TMDB pages were used for initial load in session/cache
+    const initialPagesUsed = tmdbPage - 1;
 
     let user = null;
     let followedMovieIds = [];
@@ -122,9 +122,10 @@ router.get("/upcoming", async (req, res) => {
       user,
       followedMovieIds,
       followMessage,
-      currentPage,
-      totalPages,
       query: "",
+      loginRedirect: "/upcoming",
+      initialLoad: true, // Flag to indicate this is initial load
+      initialPagesUsed: initialPagesUsed // Track which TMDB pages were consumed
     });
   } catch (err) {
     console.error("TMDB upcoming movies error:", err);

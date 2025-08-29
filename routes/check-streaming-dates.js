@@ -3,7 +3,7 @@ const router = express.Router();
 const airtableAxios = require("../services/airtable").airtableAxios;
 const getStreamingReleaseDate =
   require("../services/tmdb").getStreamingReleaseDate;
-const sendEmail = require("../services/sendEmail");
+const sendEmail = require("../services/send-email");
 
 const AIRTABLE_FOLLOWED_MOVIES_TABLE =
   process.env.AIRTABLE_FOLLOWED_MOVIES_TABLE;

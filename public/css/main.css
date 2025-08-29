@@ -19,8 +19,8 @@
 @import url("./navbar.css");
 @import url("./forms.css");
 @import url("./cards.css");
-@import url("./movie-details.css");
 @import url("./my-movies.css");
+@import url("./movie-details.css");
 
 /* 6. Miscellaneous components */
 @import url("./misc.css");

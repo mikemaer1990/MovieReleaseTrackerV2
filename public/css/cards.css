@@ -1,5 +1,5 @@
 /* ============================
-   Movie Cards and Grid Components
+   Movie Cards and Grid Components - Hover Overlay Design
    Card layouts for search results and movie lists
 ============================ */
 
@@ -20,157 +20,102 @@
 .results-grid,
 .movies-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 180px);
+  grid-template-columns: repeat(auto-fill, 200px);
   gap: var(--spacing-lg);
   justify-content: start;
-  max-width: calc(180px * 5 + 4rem);
+  max-width: calc(200px * 5 + 4rem);
   margin: 0 auto;
 }
 
-/* Base Movie Card */
-.movie-card {
-  display: flex;
-  flex-direction: column;
-  background-color: var(--color-bg-tertiary);
+/* Movie Card - Hover Overlay Design (Only for results grid) */
+.results-grid .movie-card {
+  position: relative;
+  width: 180px;
+  height: 270px; /* Standard movie poster aspect ratio 2:3 */
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
   overflow: hidden;
+  cursor: pointer;
   transition: transform var(--transition-fast);
-  text-align: center;
-  padding: var(--spacing-md);
-  width: 160px;
+  box-shadow: var(--shadow-lg);
   margin: 0;
   font-family: var(--font-primary);
+  background-color: var(--color-bg-tertiary);
 }
 
-.movie-card:hover {
-  transform: translateY(-2px);
+.results-grid .movie-card:hover {
+  transform: translateY(-4px);
 }
 
-.movie-card img {
+/* Movie Poster (Only for results grid) */
+.results-grid .movie-poster,
+.results-grid .movie-card img {
   width: 100%;
-  height: auto;
+  height: 100%;
+  -o-object-fit: cover;
+  object-fit: cover;
   display: block;
-  aspect-ratio: 2 / 3;
-  -o-object-fit: cover;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
   background-color: #eee;
 }
 
-.movie-card img.fallback {
+.results-grid .movie-card img.fallback {
   -o-object-fit: cover;
   object-fit: cover;
   background-color: #eee;
 }
 
-.movie-card h3 {
-  font-size: 0.95rem;
-  margin-top: var(--spacing-sm);
-  margin-bottom: var(--spacing-xs);
+/* Hide legacy elements when using overlay (Only for results grid) */
+.results-grid .movie-card h3,
+.results-grid .movie-card p {
+  display: none;
 }
 
-.movie-card p {
-  font-size: 0.8rem;
-  color: #666;
-  margin-bottom: var(--spacing-sm);
-}
-
-/* Movie Rating Display */
-.movie-rating {
-  color: var(--color-gold-medium);
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: var(--spacing-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-xs);
-}
-
-/* Follow Buttons */
-.movie-card .follow-button {
-  margin-top: auto;
-  padding: 0.5rem 1.5rem;
-  font-size: 1rem;
-  border: none;
-  background: var(--gradient-gold);
-  color: var(--color-text-dark);
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: all var(--transition-medium);
-  font-weight: 600;
-}
-
-.movie-card .follow-button:hover {
-  background: var(--gradient-gold-hover);
-}
-
-.movie-card .follow-button:disabled {
-  background: var(--color-bg-secondary);
-  color: var(--color-text-muted);
-  cursor: not-allowed;
-  opacity: 0.7;
-  box-shadow: none;
-  font-weight: 500;
-  -webkit-filter: grayscale(40%);
-  filter: grayscale(40%);
-  transition: none;
-}
-
-.movie-card .follow-button.loading {
-  -webkit-animation: pulse 1.5s infinite;
-  animation: pulse 1.5s infinite;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-.movie-card .unfollow-button {
-  position: relative;
-  cursor: pointer;
-  margin-top: auto;
-  padding: 0.5rem 1.5rem 0.5rem 2.5rem;
-  font-size: 1rem;
-  background: transparent;
-  color: #b8860b;
-  border: 1px solid #b8860b;
-  border-radius: var(--radius-md);
-  transition: all var(--transition-medium);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.movie-card .unfollow-button:hover {
-  background: rgba(184, 134, 11, 0.1);
-  box-shadow: 0 0 8px rgba(184, 134, 11, 0.4);
-}
-
-.movie-card .unfollow-button::before {
-  content: "×";
+/* Overlay that appears on hover (Only for results grid) */
+.results-grid .movie-overlay {
   position: absolute;
-  left: 1.7rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-weight: 700;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  pointer-events: none;
-  color: #b8860b;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  opacity: 0;
+  transition: opacity var(--transition-medium);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+  text-align: center;
 }
 
-.movie-card .unfollow-button.loading {
-  -webkit-animation: pulse-red 1.5s infinite;
-  animation: pulse-red 1.5s infinite;
-  pointer-events: none;
-  opacity: 0.8;
+.results-grid .movie-card:hover .movie-overlay {
+  opacity: 1;
 }
 
-.movie-dates {
-  margin: 8px 0;
-  font-size: 0.9rem;
+/* Top section - Title and basic info */
+.overlay-top {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Movie title in overlay */
+.overlay-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
   line-height: 1.3;
+  text-align: center;
+  color: white;
+}
+
+/* Dates in overlay */
+.overlay-dates,
+.movie-dates {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin-bottom: 8px;
+  text-align: center;
 }
 
 .date-item {
@@ -203,11 +148,119 @@
   color: #6b9bd1; /* Blue for streaming */
 }
 
-/* Follow Container with Options */
+/* Rating in overlay */
+.overlay-rating,
+.movie-rating {
+  color: var(--color-gold-medium);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+}
+
+/* Bottom section - Actions */
+.overlay-actions {
+  margin-top: auto;
+}
+
+/* Follow Buttons - Updated for overlay (Only for results grid) */
+.overlay-actions .follow-button,
+.results-grid .movie-card .follow-button {
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  border: none;
+  background: var(--gradient-gold);
+  color: var(--color-text-dark);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-medium);
+  font-weight: 600;
+}
+
+.overlay-actions .follow-button:hover,
+.results-grid .movie-card .follow-button:hover {
+  background: var(--gradient-gold-hover);
+  transform: translateY(-1px);
+}
+
+.overlay-actions .follow-button:disabled,
+.results-grid .movie-card .follow-button:disabled {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: none;
+  font-weight: 500;
+  -webkit-filter: grayscale(40%);
+  filter: grayscale(40%);
+  transition: none;
+  transform: none;
+}
+
+.overlay-actions .follow-button.loading,
+.results-grid .movie-card .follow-button.loading {
+  -webkit-animation: pulse 1.5s infinite;
+  animation: pulse 1.5s infinite;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.overlay-actions .unfollow-button,
+.results-grid .movie-card .unfollow-button {
+  position: relative;
+  width: 100%;
+  padding: 10px 16px 10px 36px;
+  font-size: 0.95rem;
+  background: transparent;
+  color: #b8860b;
+  border: 1px solid #b8860b;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-medium);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.overlay-actions .unfollow-button:hover,
+.results-grid .movie-card .unfollow-button:hover {
+  background: rgba(184, 134, 11, 0.1);
+  box-shadow: 0 0 8px rgba(184, 134, 11, 0.4);
+  transform: translateY(-1px);
+}
+
+.overlay-actions .unfollow-button::before,
+.results-grid .movie-card .unfollow-button::before {
+  content: "×";
+  position: absolute;
+  left: 1.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 700;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  pointer-events: none;
+  color: #b8860b;
+}
+
+.overlay-actions .unfollow-button.loading,
+.results-grid .movie-card .unfollow-button.loading {
+  -webkit-animation: pulse-red 1.5s infinite;
+  animation: pulse-red 1.5s infinite;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* Follow Container with Options - Adapted for overlay */
 .follow-container {
   position: relative;
-  display: inline-block;
-  margin-top: auto;
+  width: 100%;
 }
 
 .follow-options-panel {
@@ -255,25 +308,31 @@
   outline: none;
 }
 
-/* Scope styles to only this partial */
+/* Legacy follow action partial support */
 .follow-action-partial {
-  margin-top: 10px;
-  text-align: center;
+  width: 100%;
+}
+.login-to-follow,
+.movie-link {
+  text-decoration: none;
 }
 
 .follow-action-partial .follow-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background-color: #f4c542; /* gold */
+  background-color: #f4c542;
   color: #000;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.9rem;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
   text-decoration: none;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
+  width: 100%;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .follow-action-partial .follow-btn i {
@@ -294,6 +353,16 @@
   background-color: #777;
 }
 
+/* Ensure form buttons take full width in overlay */
+.overlay-actions form,
+.overlay-actions .follow-container {
+  width: 100%;
+}
+
+.overlay-actions form button {
+  width: 100%;
+}
+
 /* Follow Message */
 .follow-msg {
   text-align: center;
@@ -307,37 +376,86 @@
   font-weight: 500;
 }
 
-/* Pagination */
-.pagination {
+
+/* Load More Button */
+.load-more-container {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
   gap: var(--spacing-md);
   margin-top: var(--spacing-xl);
   padding: var(--spacing-lg);
 }
 
-.pagination-btn {
-  padding: var(--spacing-sm) var(--spacing-md);
+.load-more-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-xl);
   background: var(--gradient-gold);
   color: var(--color-text-dark);
-  text-decoration: none;
-  border-radius: var(--radius-md);
-  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 1.1rem;
+  cursor: pointer;
   transition: all var(--transition-fast);
+  min-width: 200px;
+  justify-content: center;
 }
 
-.pagination-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+.load-more-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
-.pagination-info {
+.load-more-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.load-spinner {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.load-spinner svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.movies-loaded-count {
+  background: var(--color-surface-lighter);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
   color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  border: 1px solid var(--color-border);
 }
 
-/* Responsive Card Design */
+#moviesCount {
+  color: var(--color-gold-medium);
+  font-weight: 600;
+}
+
+.load-more-btn.no-more {
+  background: var(--color-surface-lighter);
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+
+.load-more-btn.no-more:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Responsive Design */
 @media (max-width: 1050px) {
   .results-header {
     margin-top: var(--spacing-lg);
@@ -354,7 +472,7 @@
 
   .results-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     gap: var(--spacing-lg);
     justify-content: start;
     justify-items: start;
@@ -363,49 +481,33 @@
     padding: 0;
   }
 
-  .movie-card {
+  .results-grid .movie-card {
     width: 160px;
+    height: 240px;
     max-width: 160px;
     margin: 0 auto;
-    padding: var(--spacing-sm);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
   }
 
-  .movie-card img {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 2 / 3;
-    -o-object-fit: cover;
-    object-fit: cover;
-    border-radius: var(--radius-sm);
+  .overlay-title {
+    font-size: 1rem;
+    margin-bottom: 10px;
   }
 
-  .movie-card h3 {
+  .overlay-dates {
     font-size: 0.85rem;
-    margin-top: var(--spacing-sm);
-    margin-bottom: var(--spacing-xs);
-    line-height: 1.2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    margin-bottom: 8px;
   }
 
-  .movie-card p {
-    font-size: 0.75rem;
-    color: #666;
-    margin-bottom: var(--spacing-sm);
-    line-height: 1.3;
+  .overlay-rating {
+    font-size: 0.85rem;
+    margin-bottom: 10px;
   }
 
-  .follow-button {
-    font-size: 0.8rem;
-    padding: 0.4rem 0.8rem;
-    width: 100%;
-    box-sizing: border-box;
+  .overlay-actions .follow-button,
+  .overlay-actions .unfollow-button,
+  .follow-action-partial .follow-btn {
+    font-size: 0.9rem;
+    padding: 8px 12px;
   }
 }
 
@@ -413,6 +515,19 @@
   .results-grid,
   .movies-grid {
     justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Show overlay by default on mobile since hover doesn't work well (Only for results grid) */
+  .results-grid .movie-overlay {
+    opacity: 0.9;
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .results-grid .movie-card:hover .movie-overlay {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.85);
   }
 }
 
@@ -424,48 +539,50 @@
     justify-items: center;
   }
 
-  .movie-card {
-    max-width: 160px;
+  .results-grid .movie-card {
     width: 140px;
+    height: 210px;
+    max-width: 140px;
     margin: 0;
   }
 
-  .movie-card h3 {
+  .results-grid .movie-overlay {
+    padding: 12px;
+  }
+
+  .overlay-title {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+
+  .overlay-dates {
     font-size: 0.8rem;
+    margin-bottom: 6px;
   }
 
-  .movie-card p {
-    font-size: 0.7rem;
-  }
-
-  .movie-card .follow-button,
-  .movie-card .unfollow-button {
+  .overlay-rating {
     font-size: 0.8rem;
-    padding: 0.4rem 0.8rem;
-    width: 100%;
-    box-sizing: border-box;
+    margin-bottom: 8px;
   }
 
-  .movie-card .unfollow-button {
-    padding-left: 1.75rem;
+  .overlay-actions .follow-button,
+  .overlay-actions .unfollow-button,
+  .follow-action-partial .follow-btn {
+    font-size: 0.85rem;
+    padding: 8px 10px;
   }
 
-  .pagination {
-    flex-direction: column;
-    gap: var(--spacing-sm);
+  .overlay-actions .unfollow-button::before {
+    left: 1rem;
   }
 
-  .pagination-btn {
-    padding: var(--spacing-sm) var(--spacing-lg);
-    width: 120px;
-    text-align: center;
-  }
 }
 
 @media (max-width: 360px) {
   .grid-container {
-    padding: 0;
+    padding: var(--spacing-sm);
   }
+
   .results-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
@@ -474,39 +591,41 @@
     margin: 0 auto;
   }
 
-  .movie-card {
+  .results-grid .movie-card {
     width: 100%;
     max-width: 150px;
+    height: 200px;
     margin: 0 auto;
-    padding: 8px;
   }
 
-  .movie-card img {
-    aspect-ratio: 3 / 4;
+  .results-grid .movie-overlay {
+    padding: 10px;
   }
 
-  .movie-card h3 {
+  .overlay-title {
     font-size: 0.85rem;
-    margin-top: 4px;
-    margin-bottom: 2px;
-    -webkit-line-clamp: 2;
-    line-height: 1.3;
+    margin-bottom: 6px;
+    line-height: 1.2;
   }
 
-  .movie-card p {
+  .overlay-dates {
     font-size: 0.75rem;
     margin-bottom: 4px;
   }
 
-  .movie-card .follow-button,
-  .movie-card .unfollow-button {
-    font-size: 0.8rem;
-    padding: 0.35rem 0.7rem;
-    width: 100%;
-    box-sizing: border-box;
+  .overlay-rating {
+    font-size: 0.75rem;
+    margin-bottom: 6px;
   }
 
-  .movie-card .unfollow-button::before {
+  .overlay-actions .follow-button,
+  .overlay-actions .unfollow-button,
+  .follow-action-partial .follow-btn {
+    font-size: 0.8rem;
+    padding: 6px 8px;
+  }
+
+  .overlay-actions .unfollow-button::before {
     content: "";
   }
 }

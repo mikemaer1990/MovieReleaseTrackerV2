@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const airtableAxios = require("../services/airtable").airtableAxios;
-const sendEmail = require("../services/sendEmail");
+const sendEmail = require("../services/send-email");
 const AIRTABLE_FOLLOWED_MOVIES_TABLE =
   process.env.AIRTABLE_FOLLOWED_MOVIES_TABLE;
 const cronSecret = process.env.CRON_SECRET;

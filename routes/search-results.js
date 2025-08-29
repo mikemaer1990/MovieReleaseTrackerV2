@@ -3,25 +3,25 @@ const router = express.Router();
 const axios = require("axios");
 const { getStreamingReleaseDate } = require("../services/tmdb");
 const { getFollowedMoviesByUserId } = require("../services/airtable");
-const { toUtcMidnight } = require("../utils/dateHelpers");
-const { sortByRelevanceAndPopularity } = require("../utils/searchHelpers");
+const { toUtcMidnight } = require("../utils/date-helpers");
+const { sortByRelevanceAndPopularity } = require("../utils/search-helpers");
 // Caching
 const { getCachedData, setCachedData } = require("../services/cache");
 router.get("/search", async (req, res) => {
   const query = req.query.query;
   const followMessage = req.query.followMessage || null;
-  const page = parseInt(req.query.page) || 1; // Add pagination support
 
   if (!query) return res.redirect("/");
 
   try {
+    // Load only the first page for initial load
     const response = await axios.get(
       `https://api.themoviedb.org/3/search/movie`,
       {
         params: {
           api_key: process.env.TMDB_API_KEY,
           query: query,
-          page: page, // Add page parameter
+          page: 1, // Always load page 1 initially
         },
       }
     );
@@ -83,6 +83,7 @@ router.get("/search", async (req, res) => {
           streamingDateRaw,
           canFollow,
           displayDate,
+          rating: movie.vote_average,
         };
       })
     );
@@ -118,9 +119,8 @@ router.get("/search", async (req, res) => {
       user,
       followedMovieIds,
       followMessage,
-      currentPage: page, // Add pagination data
-      totalPages: response.data.total_pages,
-      totalResults: response.data.total_results,
+      loginRedirect: `/search?query=${query}`,
+      initialLoad: true, // Flag to indicate this is initial load
     });
   } catch (err) {
     console.error("TMDB search error:", err);

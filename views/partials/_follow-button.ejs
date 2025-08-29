@@ -6,12 +6,6 @@
          data-release-date="<%= movie.displayDate %>"
          data-poster-path="<%= movie.poster_path %>">
 
-      <div class="follow-options-panel" aria-hidden="true">
-        <button class="follow-type-btn" data-type="theatrical" title="Follow Theatrical Release">🎭</button>
-        <button class="follow-type-btn" data-type="streaming" title="Follow Streaming Release">📺</button>
-        <button class="follow-type-btn" data-type="both" title="Follow Both Releases">🎬</button>
-      </div>
-
       <% if (followedMovieIds && followedMovieIds.includes(Number(movie.id))) { %>
         <!-- Unfollow Button -->
         <form action="/unfollow/<%= movie.id %>" method="POST">
@@ -27,14 +21,19 @@
           </button>
         </form>
       <% } %>
+
+      <!-- Follow Options Panel (hidden by default, can be shown via JS) -->
+      <div class="follow-options-panel" aria-hidden="true">
+        <button class="follow-type-btn" data-type="theatrical" title="Follow Theatrical Release">🎭</button>
+        <button class="follow-type-btn" data-type="streaming" title="Follow Streaming Release">📺</button>
+        <button class="follow-type-btn" data-type="both" title="Follow Both Releases">🎬</button>
+      </div>
     </div>
   <% } else { %>
     <!-- Login to follow -->
-    <a
-      class="follow-btn login"
-      href="/auth/login?redirect=<%= encodeURIComponent('/search?query=' + (query || '')) %>"
-    >
-      <i class="fas fa-user-lock"></i> Login to follow
+    <a class="follow-button login-to-follow" 
+       href="/auth/login?redirect=<%= encodeURIComponent(loginRedirect) %>">
+      🔒 Login
     </a>
   <% } %>
 </div>
