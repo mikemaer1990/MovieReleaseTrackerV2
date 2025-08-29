@@ -131,3 +131,6 @@ dist
 
 # Replit debugger
 .breakpoints
+
+# Playwright MCP artifacts
+.playwright-mcp/

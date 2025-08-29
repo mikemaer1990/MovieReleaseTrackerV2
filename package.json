@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@playwright/test": "^1.55.0",
     "@types/node": "^22.13.11",
     "airtable": "^0.12.2",
     "axios": "^1.11.0",
