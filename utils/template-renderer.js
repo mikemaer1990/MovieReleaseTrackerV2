@@ -17,6 +17,7 @@ async function renderMovieCards(req, movies, options = {}) {
     user = null,
     followedMovieIds = [],
     query = '',
+    loginRedirect = '/',
     templatePath = 'partials/_results-movie-card'
   } = options;
 
@@ -27,7 +28,8 @@ async function renderMovieCards(req, movies, options = {}) {
         showFollowButton,
         user,
         followedMovieIds,
-        query
+        query,
+        loginRedirect
       }, (err, html) => {
         if (err) {
           reject(err);

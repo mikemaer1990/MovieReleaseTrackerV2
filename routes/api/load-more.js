@@ -4,6 +4,7 @@ const axios = require("axios");
 const { toUtcMidnight } = require("../../utils/date-helpers");
 const { processMoviesWithDates, filterMovies, sortMovies } = require("../../services/movie-processor");
 const { renderMovieCards, createLoadMoreResponse, createErrorResponse } = require("../../utils/template-renderer");
+const { getFollowedMoviesByUserId } = require("../../services/airtable");
 
 // Load more releases endpoint
 router.get("/load-more-releases", async (req, res) => {
@@ -63,8 +64,25 @@ router.get("/load-more-releases", async (req, res) => {
     // Determine if there are more pages available
     const hasMore = page < response.data.total_pages && page < 100;
 
+    // Get user's followed movies for proper follow button rendering
+    let followedMovieIds = [];
+    if (req.session && req.session.userId) {
+      try {
+        const followedMovies = await getFollowedMoviesByUserId(req.session.userId);
+        followedMovieIds = followedMovies.map(movie => Number(movie.TMDB_ID));
+      } catch (error) {
+        console.error('Error getting followed movies for load-more:', error);
+      }
+    }
+
     // Render HTML using shared utility
-    const html = await renderMovieCards(req, sortedMovies);
+    const html = await renderMovieCards(req, sortedMovies, {
+      showFollowButton: true,
+      user: req.session?.userId ? { id: req.session.userId, name: req.session.userName } : null,
+      followedMovieIds,
+      loginRedirect: '/top-releases',
+      templatePath: 'partials/_results-movie-card'
+    });
 
     // Create standardized response
     const responseData = createLoadMoreResponse(sortedMovies, html, {
@@ -108,8 +126,26 @@ router.get("/load-more-search", async (req, res) => {
 
     const hasMore = page < response.data.total_pages;
 
+    // Get user's followed movies for proper follow button rendering
+    let followedMovieIds = [];
+    if (req.session && req.session.userId) {
+      try {
+        const followedMovies = await getFollowedMoviesByUserId(req.session.userId);
+        followedMovieIds = followedMovies.map(movie => Number(movie.TMDB_ID));
+      } catch (error) {
+        console.error('Error getting followed movies for load-more:', error);
+      }
+    }
+
     // Render HTML using shared utility (passing query for context)
-    const html = await renderMovieCards(req, processedMovies, { query });
+    const html = await renderMovieCards(req, processedMovies, { 
+      query,
+      showFollowButton: true,
+      user: req.session?.userId ? { id: req.session.userId, name: req.session.userName } : null,
+      followedMovieIds,
+      loginRedirect: `/search?query=${encodeURIComponent(query)}`,
+      templatePath: 'partials/_results-movie-card'
+    });
 
     // Create standardized response
     const responseData = createLoadMoreResponse(processedMovies, html, {
@@ -175,8 +211,25 @@ router.get("/load-more-upcoming", async (req, res) => {
 
     const hasMore = tmdbPage <= totalTmdbPages && tmdbPage <= 100;
 
+    // Get user's followed movies for proper follow button rendering
+    let followedMovieIds = [];
+    if (req.session && req.session.userId) {
+      try {
+        const followedMovies = await getFollowedMoviesByUserId(req.session.userId);
+        followedMovieIds = followedMovies.map(movie => Number(movie.TMDB_ID));
+      } catch (error) {
+        console.error('Error getting followed movies for load-more:', error);
+      }
+    }
+
     // Render HTML using shared utility
-    const html = await renderMovieCards(req, pageMovies);
+    const html = await renderMovieCards(req, pageMovies, {
+      showFollowButton: true,
+      user: req.session?.userId ? { id: req.session.userId, name: req.session.userName } : null,
+      followedMovieIds,
+      loginRedirect: '/upcoming',
+      templatePath: 'partials/_results-movie-card'
+    });
 
     // Create standardized response
     const responseData = createLoadMoreResponse(pageMovies, html, {
