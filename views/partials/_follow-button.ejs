@@ -7,16 +7,19 @@
          data-poster-path="<%= movie.poster_path %>">
 
       <% if (followedMovieIds && followedMovieIds.includes(Number(movie.id))) { %>
-        <!-- Unfollow Button -->
+        <!-- Following Button (shows as Following, hover to Unfollow) -->
         <form action="/unfollow/<%= movie.id %>" method="POST">
-          <button type="submit" class="unfollow-button">Unfollow</button>
+          <button type="submit" class="following-button" title="Click to unfollow this movie">
+            <span class="following-text">Following ✓</span>
+            <span class="unfollow-text">× Unfollow</span>
+          </button>
         </form>
       <% } else { %>
         <!-- Follow Button -->
         <form action="/follow/<%= movie.id %>" method="POST">
           <button type="submit" 
             class="follow-button" 
-            <%= movie.canFollow ? '' : 'disabled title="Cannot follow — no streaming date and theatrical release over 21 days ago"' %>>
+            <%= movie.canFollow ? 'title="Click to follow this movie"' : 'disabled title="Released"' %>>
             Follow
           </button>
         </form>
@@ -24,16 +27,16 @@
 
       <!-- Follow Options Panel (hidden by default, can be shown via JS) -->
       <div class="follow-options-panel" aria-hidden="true">
-        <button class="follow-type-btn" data-type="theatrical" title="Follow Theatrical Release">🎭</button>
-        <button class="follow-type-btn" data-type="streaming" title="Follow Streaming Release">📺</button>
-        <button class="follow-type-btn" data-type="both" title="Follow Both Releases">🎬</button>
+        <button class="follow-type-btn" data-type="theatrical" title="Theatrical Release (cinema only)" aria-label="Follow theatrical release">🎭</button>
+        <button class="follow-type-btn" data-type="streaming" title="Streaming Release (digital/streaming)" aria-label="Follow streaming release">📺</button>
+        <button class="follow-type-btn" data-type="both" title="Both Releases (theatrical + streaming)" aria-label="Follow both releases">🎬</button>
       </div>
     </div>
   <% } else { %>
     <!-- Login to follow -->
-    <a class="follow-button login-to-follow" 
+    <a class="login-to-follow" 
        href="/auth/login?redirect=<%= encodeURIComponent(loginRedirect) %>">
-      🔒 Login
+      Login
     </a>
   <% } %>
 </div>

@@ -134,3 +134,7 @@ dist
 
 # Playwright MCP artifacts
 .playwright-mcp/
+
+# Claude Code folders
+.claude/
+context/

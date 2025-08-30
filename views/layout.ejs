@@ -19,9 +19,25 @@
       </div>
 
       <div class="nav-right">
-        <form class="nav-search" action="/search" method="GET">
-          <span class="search-icon" aria-hidden="true">🔍</span>
-          <input type="text" name="query" placeholder="Search..." required />
+        <form class="nav-search" action="/search" method="GET" role="search">
+          <label for="nav-search-input" class="sr-only">Search for movies</label>
+          <input 
+            id="nav-search-input"
+            type="text" 
+            name="query" 
+            placeholder="Search movies..." 
+            required 
+            autocomplete="off"
+            aria-label="Search for movies"
+          />
+          <button 
+            type="submit" 
+            class="search-button"
+            aria-label="Search"
+            title="Search for movies"
+          >
+            <span class="search-icon" aria-hidden="true">🔍</span>
+          </button>
         </form>
 
         <div class="nav-links">

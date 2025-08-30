@@ -167,25 +167,30 @@
   margin-top: auto;
 }
 
-/* Follow Buttons - Updated for overlay (Only for results grid) */
+/* Follow Buttons - More subtle styling following best practices */
 .overlay-actions .follow-button,
 .results-grid .movie-card .follow-button {
   width: 100%;
   padding: 10px 16px;
-  font-size: 0.95rem;
-  border: none;
-  background: var(--gradient-gold);
-  color: var(--color-text-dark);
+  font-size: 0.9rem;
+  border: 2px solid rgba(212, 175, 55, 0.6);
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--color-gold-medium);
   cursor: pointer;
   border-radius: var(--radius-sm);
   transition: all var(--transition-medium);
-  font-weight: 600;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .overlay-actions .follow-button:hover,
 .results-grid .movie-card .follow-button:hover {
-  background: var(--gradient-gold-hover);
+  background: rgba(212, 175, 55, 0.2);
+  border-color: var(--color-gold-medium);
+  color: var(--color-gold-light);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
 }
 
 .overlay-actions .follow-button:disabled,
@@ -210,6 +215,50 @@
   opacity: 0.8;
 }
 
+/* Following Button - New hover-to-unfollow design */
+.overlay-actions .following-button,
+.results-grid .movie-card .following-button {
+  position: relative;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  background: rgba(46, 125, 50, 0.1);
+  color: var(--color-success, #4caf50);
+  border: 2px solid rgba(76, 175, 80, 0.6);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-medium);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.overlay-actions .following-button .unfollow-text,
+.results-grid .movie-card .following-button .unfollow-text {
+  display: none;
+}
+
+.overlay-actions .following-button:hover .following-text,
+.results-grid .movie-card .following-button:hover .following-text {
+  display: none;
+}
+
+.overlay-actions .following-button:hover .unfollow-text,
+.results-grid .movie-card .following-button:hover .unfollow-text {
+  display: inline;
+}
+
+.overlay-actions .following-button:hover,
+.results-grid .movie-card .following-button:hover {
+  background: rgba(244, 67, 54, 0.1);
+  color: var(--color-error, #f44336);
+  border-color: rgba(244, 67, 54, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
+/* Legacy unfollow button (keeping for compatibility) */
 .overlay-actions .unfollow-button,
 .results-grid .movie-card .unfollow-button {
   position: relative;
@@ -335,6 +384,20 @@
   box-sizing: border-box;
 }
 
+/* Ensure follow buttons get the new subtle styling */
+.follow-action-partial .follow-button:not(.login-to-follow) {
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--color-gold-medium);
+  border: 2px solid rgba(212, 175, 55, 0.6);
+  font-weight: 500;
+}
+
+.follow-action-partial .follow-button:not(.login-to-follow):hover {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: var(--color-gold-medium);
+  color: var(--color-gold-light);
+}
+
 .follow-action-partial .follow-btn i {
   font-size: 1rem;
 }
@@ -344,13 +407,38 @@
   transform: translateY(-1px);
 }
 
-.follow-action-partial .follow-btn.login {
-  background-color: #555;
-  color: #fff;
+/* Login button - subtle and non-intrusive */
+.follow-action-partial .login-to-follow {
+  background: rgba(0, 0, 0, 0.6);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
-.follow-action-partial .follow-btn.login:hover {
-  background-color: #777;
+.follow-action-partial .login-to-follow:hover {
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.follow-action-partial .login-to-follow:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 /* Ensure form buttons take full width in overlay */
@@ -504,10 +592,12 @@
   }
 
   .overlay-actions .follow-button,
+  .overlay-actions .following-button,
   .overlay-actions .unfollow-button,
-  .follow-action-partial .follow-btn {
-    font-size: 0.9rem;
-    padding: 8px 12px;
+  .follow-action-partial .follow-btn,
+  .follow-action-partial .login-to-follow {
+    font-size: 0.85rem;
+    padding: 8px 10px;
   }
 }
 
@@ -566,8 +656,10 @@
   }
 
   .overlay-actions .follow-button,
+  .overlay-actions .following-button,
   .overlay-actions .unfollow-button,
-  .follow-action-partial .follow-btn {
+  .follow-action-partial .follow-btn,
+  .follow-action-partial .login-to-follow {
     font-size: 0.85rem;
     padding: 8px 10px;
   }
@@ -619,8 +711,10 @@
   }
 
   .overlay-actions .follow-button,
+  .overlay-actions .following-button,
   .overlay-actions .unfollow-button,
-  .follow-action-partial .follow-btn {
+  .follow-action-partial .follow-btn,
+  .follow-action-partial .login-to-follow {
     font-size: 0.8rem;
     padding: 6px 8px;
   }
