@@ -51,4 +51,9 @@ input:-webkit-autofill:active {
   color: var(--color-gold-medium);
   margin-top: var(--spacing-lg);
   display: inline-block;
+  text-decoration: none;
+}
+
+.register-link:hover {
+  text-decoration: underline;
 }

@@ -132,7 +132,7 @@ PORT=3000 (optional)
 - **Invalidation**: Explicit cache clearing on follow/unfollow operations
 - **Location**: All caching logic centralized in `services/cache.js`
 
-## Visual Development & Testing
+<!-- ## Visual Development & Testing
 
 ### Design System
 
@@ -230,4 +230,4 @@ When implementing UI features, verify:
 - Configuration file updates
 - Documentation changes
 - Test file modifications
-- Non-visual utility functions
+- Non-visual utility functions -->

@@ -7,22 +7,17 @@
          data-poster-path="<%= movie.poster_path %>">
 
       <% if (followedMovieIds && followedMovieIds.includes(Number(movie.id))) { %>
-        <!-- Following Button (shows as Following, hover to Unfollow) -->
-        <form action="/unfollow/<%= movie.id %>" method="POST">
-          <button type="submit" class="following-button" title="Click to unfollow this movie">
-            <span class="following-text">Following ✓</span>
-            <span class="unfollow-text">× Unfollow</span>
-          </button>
-        </form>
+        <!-- Unfollow Button (JS will handle the click) -->
+        <button type="button" class="unfollow-button" title="Click to unfollow this movie">
+          Unfollow
+        </button>
       <% } else { %>
-        <!-- Follow Button -->
-        <form action="/follow/<%= movie.id %>" method="POST">
-          <button type="submit" 
-            class="follow-button" 
-            <%= movie.canFollow ? 'title="Click to follow this movie"' : 'disabled title="Released"' %>>
-            Follow
-          </button>
-        </form>
+        <!-- Follow Button (JS will handle the click) -->
+        <button type="button" 
+          class="follow-button" 
+          <%= movie.canFollow ? 'title="Click to follow this movie"' : 'disabled title="Released"' %>>
+          Follow
+        </button>
       <% } %>
 
       <!-- Follow Options Panel (hidden by default, can be shown via JS) -->

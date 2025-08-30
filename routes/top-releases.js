@@ -21,7 +21,8 @@ router.get("/top-releases", async (req, res) => {
 
     // Load initial batch only (first 20 movies)
     const initialLimit = RESULTS_PER_PAGE;
-    const maxPagesToFetch = 3; // Fetch fewer pages for initial load
+    // Increase pages when filtering to account for genre filtering reducing results
+    const maxPagesToFetch = genre ? 8 : 3;
 
     // Map our sort options to TMDB's sort_by parameter
     let tmdbSortBy = "popularity.desc";
@@ -30,7 +31,8 @@ router.get("/top-releases", async (req, res) => {
         tmdbSortBy = "vote_average.desc";
         break;
       case "newest":
-        tmdbSortBy = "release_date.desc";
+        // Use popularity for server-side, then sort by streamingDate client-side
+        tmdbSortBy = "popularity.desc";
         break;
       case "oldest":
         tmdbSortBy = "release_date.asc";
@@ -46,30 +48,28 @@ router.get("/top-releases", async (req, res) => {
       allValidMovies.length < initialLimit &&
       tmdbPage <= maxPagesToFetch
     ) {
+      // Build API params - include genre in TMDB call if specified
+      const apiParams = {
+        api_key: process.env.TMDB_API_KEY,
+        page: tmdbPage,
+        region: "US",
+        sort_by: tmdbSortBy,
+        "primary_release_date.gte": sixMonthsAgo.toISOString().split('T')[0],
+        "primary_release_date.lte": now.toISOString().split('T')[0],
+        with_release_type: "4|5", // Digital and Physical releases
+      };
+
+      // Add genre filter to TMDB API call for better server-side filtering
+      if (genre) {
+        apiParams.with_genres = genre;
+      }
+
       const response = await axios.get(
         `https://api.themoviedb.org/3/discover/movie`,
-        {
-          params: {
-            api_key: process.env.TMDB_API_KEY,
-            page: tmdbPage,
-            region: "US",
-            sort_by: tmdbSortBy,
-            "primary_release_date.gte": sixMonthsAgo.toISOString().split('T')[0],
-            "primary_release_date.lte": now.toISOString().split('T')[0],
-            with_release_type: "4|5", // Digital and Physical releases
-          },
-        }
+        { params: apiParams }
       );
 
       let results = response.data.results;
-
-      // Filter by genre client-side if genre is specified
-      if (genre) {
-        results = results.filter(
-          (movie) =>
-            movie.genre_ids && movie.genre_ids.includes(parseInt(genre))
-        );
-      }
 
       // Process movies with streaming dates
       const processedMovies = await Promise.all(
@@ -78,9 +78,23 @@ router.get("/top-releases", async (req, res) => {
           const streamingDate = streamingDateRaw
             ? new Date(streamingDateRaw)
             : null;
-          const theatricalDate = movie.release_date
-            ? new Date(movie.release_date)
-            : null;
+          
+          // Get the actual theatrical release date from movie details API
+          // since discover API returns streaming date when filtering by release_type
+          let theatricalDate = null;
+          try {
+            const movieDetails = await axios.get(
+              `https://api.themoviedb.org/3/movie/${movie.id}`,
+              { params: { api_key: process.env.TMDB_API_KEY } }
+            );
+            theatricalDate = movieDetails.data.release_date
+              ? new Date(movieDetails.data.release_date)
+              : null;
+          } catch (error) {
+            console.error(`Error fetching theatrical date for movie ${movie.id}:`, error);
+            // Fallback to discover API date
+            theatricalDate = movie.release_date ? new Date(movie.release_date) : null;
+          }
 
           const streamingDateMidnight = streamingDate
             ? toUtcMidnight(streamingDate)
@@ -89,7 +103,8 @@ router.get("/top-releases", async (req, res) => {
             ? toUtcMidnight(theatricalDate)
             : null;
 
-          const hasRecentStreaming = streamingDateMidnight || theatricalDateMidnight;
+          // For top streaming releases, only include movies with actual streaming dates
+          const hasRecentStreaming = streamingDateMidnight;
 
           let displayDate = "Available Now";
           if (streamingDateMidnight) {
@@ -100,6 +115,7 @@ router.get("/top-releases", async (req, res) => {
 
           return {
             ...movie,
+            release_date: theatricalDate ? theatricalDate.toISOString().split('T')[0] : movie.release_date, // Override with correct theatrical date
             streamingDateRaw,
             streamingDate: streamingDateMidnight,
             theatricalDate: theatricalDateMidnight,

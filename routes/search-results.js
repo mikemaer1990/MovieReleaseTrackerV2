@@ -90,6 +90,7 @@ router.get("/search", async (req, res) => {
 
     let user = null;
     let followedMovieIds = [];
+    let followedMovies = [];
 
     if (req.session.userId) {
       user = {
@@ -108,6 +109,7 @@ router.get("/search", async (req, res) => {
       followedMovieIds = followedRecords.map((record) =>
         Number(record.fields.TMDB_ID)
       );
+      followedMovies = followedRecords;
     }
 
     // set layout var
@@ -118,6 +120,7 @@ router.get("/search", async (req, res) => {
       movies,
       user,
       followedMovieIds,
+      followedMovies,
       followMessage,
       loginRedirect: `/search?query=${query}`,
       initialLoad: true, // Flag to indicate this is initial load

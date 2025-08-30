@@ -8,25 +8,39 @@
     <div class="filter-row">
       <div class="filter-group">
         <label for="sort">Sort by:</label>
-        <select name="sort" id="sort" class="filter-select">
-          <% sortOptions.forEach(option => { %>
-            <option value="<%= option.value %>" <%= sortBy === option.value ? 'selected' : '' %>>
-              <%= option.label %>
-            </option>
-          <% }) %>
-        </select>
+        <div class="custom-dropdown" data-name="sort">
+          <button type="button" class="dropdown-button" id="sort-button">
+            <span class="dropdown-text"><%= sortOptions.find(opt => opt.value === sortBy)?.label || 'Most Popular' %></span>
+            <span class="dropdown-arrow"></span>
+          </button>
+          <div class="dropdown-menu" id="sort-menu">
+            <% sortOptions.forEach(option => { %>
+              <div class="dropdown-option <%= sortBy === option.value ? 'selected' : '' %>" data-value="<%= option.value %>">
+                <%= option.label %>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+        <input type="hidden" name="sort" value="<%= sortBy %>" id="sort-input">
       </div>
       
       <div class="filter-group">
         <label for="genre">Genre:</label>
-        <select name="genre" id="genre" class="filter-select">
-          <option value="">All Genres</option>
-          <% genres.forEach(genreOption => { %>
-            <option value="<%= genreOption.id %>" <%= genre == genreOption.id ? 'selected' : '' %>>
-              <%= genreOption.name %>
-            </option>
-          <% }) %>
-        </select>
+        <div class="custom-dropdown" data-name="genre">
+          <button type="button" class="dropdown-button" id="genre-button">
+            <span class="dropdown-text"><%= genre ? genres.find(g => g.id == genre)?.name || 'All Genres' : 'All Genres' %></span>
+            <span class="dropdown-arrow"></span>
+          </button>
+          <div class="dropdown-menu" id="genre-menu">
+            <div class="dropdown-option <%= !genre ? 'selected' : '' %>" data-value="">All Genres</div>
+            <% genres.forEach(genreOption => { %>
+              <div class="dropdown-option <%= genre == genreOption.id ? 'selected' : '' %>" data-value="<%= genreOption.id %>">
+                <%= genreOption.name %>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+        <input type="hidden" name="genre" value="<%= genre || '' %>" id="genre-input">
       </div>
       
       <button type="submit" class="filter-button">Apply Filters</button>
@@ -70,4 +84,5 @@
 
 <script src="/js/movie-cards.js"></script>
 <script src="/js/load-more.js"></script>
+<script src="/js/custom-dropdown.js"></script>
 <script src="/js/top-releases.js"></script>
