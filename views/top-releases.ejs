@@ -1,87 +1,34 @@
-<section class="results-header">
-  <p>Top Streaming Releases</p>
-</section>
+<div class="page-container">
+  <%- include('partials/_page-header', { 
+    title: 'Top Streaming Releases',
+    subtitle: 'Discover the latest movies available for streaming'
+  }) %>
 
-<!-- Filter and Sort Controls -->
-<div class="filter-controls">
-  <form method="GET" action="/top-releases" class="filter-form">
-    <div class="filter-row">
-      <div class="filter-group">
-        <label for="sort">Sort by:</label>
-        <div class="custom-dropdown" data-name="sort">
-          <button type="button" class="dropdown-button" id="sort-button">
-            <span class="dropdown-text"><%= sortOptions.find(opt => opt.value === sortBy)?.label || 'Most Popular' %></span>
-            <span class="dropdown-arrow"></span>
-          </button>
-          <div class="dropdown-menu" id="sort-menu">
-            <% sortOptions.forEach(option => { %>
-              <div class="dropdown-option <%= sortBy === option.value ? 'selected' : '' %>" data-value="<%= option.value %>">
-                <%= option.label %>
-              </div>
-            <% }) %>
-          </div>
-        </div>
-        <input type="hidden" name="sort" value="<%= sortBy %>" id="sort-input">
-      </div>
-      
-      <div class="filter-group">
-        <label for="genre">Genre:</label>
-        <div class="custom-dropdown" data-name="genre">
-          <button type="button" class="dropdown-button" id="genre-button">
-            <span class="dropdown-text"><%= genre ? genres.find(g => g.id == genre)?.name || 'All Genres' : 'All Genres' %></span>
-            <span class="dropdown-arrow"></span>
-          </button>
-          <div class="dropdown-menu" id="genre-menu">
-            <div class="dropdown-option <%= !genre ? 'selected' : '' %>" data-value="">All Genres</div>
-            <% genres.forEach(genreOption => { %>
-              <div class="dropdown-option <%= genre == genreOption.id ? 'selected' : '' %>" data-value="<%= genreOption.id %>">
-                <%= genreOption.name %>
-              </div>
-            <% }) %>
-          </div>
-        </div>
-        <input type="hidden" name="genre" value="<%= genre || '' %>" id="genre-input">
-      </div>
-      
-      <button type="submit" class="filter-button">Apply Filters</button>
-    </div>
-  </form>
+  <%- include('partials/_page-controls', { 
+    showControls: true,
+    actionUrl: '/top-releases',
+    sortOptions,
+    sortBy,
+    genres,
+    genre
+  }) %>
+
+  <%- include('partials/_page-content', { 
+    movies,
+    user: user || null,
+    followedMovieIds: null,
+    query: '',
+    showResultsCount: true,
+    showLoadMore: true,
+    showFollowButton: false,
+    emptyMessage: 'No top releases found for the selected criteria.'
+  }) %>
 </div>
 
-<% if ((movies || []).length > 0) { %>
-  <div class="grid-container">
-    <div class="results-grid">
-      <% movies.forEach(movie => { %>
-        <%- include('partials/_results-movie-card', { 
-          movie, 
-          showFollowButton: false 
-        }) %>
-      <% }); %>
-    </div>
-  </div>
-
-  <!-- Load More Button -->
-  <div class="load-more-container" id="loadMoreContainer">
-    <button class="load-more-btn" id="loadMoreBtn">
-      <span class="load-text">Load More Movies</span>
-      <span class="load-spinner" style="display:none;">
-        <svg width="20" height="20" viewBox="0 0 50 50">
-          <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.416" stroke-dashoffset="31.416">
-            <animate attributeName="stroke-array" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
-            <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
-          </svg>
-          Loading...
-        </span>
-    </button>
-    <div class="movies-loaded-count">
-      Showing <span id="moviesCount"><%= movies.length %></span> movies
-    </div>
-  </div>
-
-<% } else { %>
-  <p style="text-align:center;">No top releases found for the selected criteria.</p>
-<% } %>
-
+<script>
+  // Pass initial pages used to JavaScript for proper load more pagination
+  window.initialPagesUsed = <%= initialPagesUsed || 3 %>;
+</script>
 <script src="/js/movie-cards.js"></script>
 <script src="/js/load-more.js"></script>
 <script src="/js/custom-dropdown.js"></script>

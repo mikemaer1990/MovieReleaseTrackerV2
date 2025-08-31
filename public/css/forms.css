@@ -220,16 +220,6 @@
   overflow: visible;
 }
 
-.filter-form::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--gradient-gold);
-  pointer-events: none;
-}
 
 .filter-row {
   display: flex;
@@ -247,11 +237,11 @@
 }
 
 .filter-group label {
-  color: var(--color-gold-medium);
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  font-size: 0.9rem;
+  text-transform: none;
+  letter-spacing: normal;
   margin-bottom: 0.25rem;
 }
 
@@ -493,9 +483,6 @@
   scrollbar-color: rgba(243, 217, 107, 0.3) rgba(0, 0, 0, 0.1);
 }
 
-.filter-button {
-  display: none; /* Hidden since we have auto-submit */
-}
 
 /* Responsive Forms */
 @media (min-width: 498px) and (max-width: 600px) {
@@ -696,10 +683,6 @@
     min-width: 140px;
   }
 
-  .filter-button {
-    max-width: 280px;
-    padding: var(--spacing-md);
-  }
 
   .auth-login-btn {
     padding: var(--spacing-md);

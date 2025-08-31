@@ -10,7 +10,9 @@
   background-color: var(--color-navbar);
   color: white;
   padding: var(--spacing-lg) var(--spacing-2xl);
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   border-bottom: 1px solid var(--color-border);
   font-family: var(--font-primary);
 }

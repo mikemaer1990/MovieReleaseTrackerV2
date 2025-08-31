@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 const { toUtcMidnight } = require("../../utils/date-helpers");
-const { processMoviesWithDates, filterMovies, sortMovies } = require("../../services/movie-processor");
+const { processMoviesWithDates, filterMovies, sortMovies, deduplicateMovies } = require("../../services/movie-processor");
 const { renderMovieCards, createLoadMoreResponse, createErrorResponse } = require("../../utils/template-renderer");
 const { getFollowedMoviesByUserId } = require("../../services/airtable");
 
@@ -12,6 +12,7 @@ router.get("/load-more-releases", async (req, res) => {
     const page = parseInt(req.query.page) || 2;
     const sortBy = req.query.sort || "popularity";
     const genre = req.query.genre || null;
+    const initialPagesUsed = parseInt(req.query.initialPagesUsed) || 3;
     
     const now = toUtcMidnight(new Date());
     const sixMonthsAgo = new Date(now);
@@ -35,13 +36,18 @@ router.get("/load-more-releases", async (req, res) => {
         break;
     }
 
+    // Calculate the correct TMDB page to request
+    // Initial load used pages 1 through initialPagesUsed
+    // Load more page 2 should start from TMDB page (initialPagesUsed + 1)
+    const tmdbPage = initialPagesUsed + (page - 1);
+
     // Fetch the next page directly from TMDB
     const response = await axios.get(
       `https://api.themoviedb.org/3/discover/movie`,
       {
         params: {
           api_key: process.env.TMDB_API_KEY,
-          page: page,
+          page: tmdbPage,
           region: "US",
           sort_by: tmdbSortBy,
           "primary_release_date.gte": sixMonthsAgo.toISOString().split('T')[0],
@@ -62,7 +68,7 @@ router.get("/load-more-releases", async (req, res) => {
     const sortedMovies = sortBy !== "popularity" ? sortMovies(validMovies, sortBy) : validMovies;
 
     // Determine if there are more pages available
-    const hasMore = page < response.data.total_pages && page < 100;
+    const hasMore = tmdbPage < response.data.total_pages;
 
     // Get user's followed movies for proper follow button rendering
     let followedMovieIds = [];
@@ -170,13 +176,13 @@ router.get("/load-more-upcoming", async (req, res) => {
     const moviesPerPage = 20;
 
     let collectedMovies = [];
-    let tmdbPage = initialPagesUsed + ((page - 2) * 3) + 1; // Start after initial pages + offset for this load more request
-    let totalTmdbPages = 1;
+    let tmdbPage = initialPagesUsed + (page - 1); // Simple sequential pagination after initial load
+    let totalTmdbPages = Infinity; // Start with no limit, will be updated after first API call
 
     // Collect movies until we have enough for this page
     while (
       collectedMovies.length < moviesPerPage &&
-      tmdbPage <= (initialPagesUsed + ((page - 1) * 3) + 3) // Allow up to 3 pages per load more
+      tmdbPage <= totalTmdbPages // Continue until we have enough movies or reach the real end
     ) {
       const response = await axios.get(
         `https://api.themoviedb.org/3/movie/upcoming`,
@@ -196,20 +202,16 @@ router.get("/load-more-upcoming", async (req, res) => {
       
       // Filter and deduplicate using shared utilities
       const filteredMovies = filterMovies(processedMovies, { type: 'upcoming' });
-      const newMovies = filteredMovies.filter(movie => 
-        !collectedMovies.some(existing => existing.id === movie.id)
-      );
+      const newMovies = deduplicateMovies(filteredMovies, collectedMovies);
 
       collectedMovies.push(...newMovies);
       tmdbPage++;
-
-      if (tmdbPage > totalTmdbPages || tmdbPage > 100) break;
     }
 
     // Take exactly the number of movies we want
     const pageMovies = collectedMovies.slice(0, moviesPerPage);
 
-    const hasMore = tmdbPage <= totalTmdbPages && tmdbPage <= 100;
+    const hasMore = tmdbPage <= totalTmdbPages;
 
     // Get user's followed movies for proper follow button rendering
     let followedMovieIds = [];

@@ -92,7 +92,7 @@ router.get("/top-releases", async (req, res) => {
               : null;
           } catch (error) {
             console.error(`Error fetching theatrical date for movie ${movie.id}:`, error);
-            // Fallback to discover API date
+            // Fallback to discover API date - but note this might be streaming date due to our filter
             theatricalDate = movie.release_date ? new Date(movie.release_date) : null;
           }
 
@@ -115,7 +115,7 @@ router.get("/top-releases", async (req, res) => {
 
           return {
             ...movie,
-            release_date: theatricalDate ? theatricalDate.toISOString().split('T')[0] : movie.release_date, // Override with correct theatrical date
+            release_date: theatricalDate ? theatricalDate.toISOString().split('T')[0] : null, // Use proper theatrical date
             streamingDateRaw,
             streamingDate: streamingDateMidnight,
             theatricalDate: theatricalDateMidnight,
@@ -204,6 +204,7 @@ router.get("/top-releases", async (req, res) => {
       genre,
       genres,
       initialLoad: true, // Flag to indicate this is initial load
+      initialPagesUsed: tmdbPage - 1, // Track how many TMDB pages were consumed
       sortOptions: [
         { value: "popularity", label: "Most Popular" },
         { value: "rating", label: "Highest Rated" },

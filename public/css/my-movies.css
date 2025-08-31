@@ -204,6 +204,21 @@
   border-color: #007bff;
 }
 
+/* Release Date Styling */
+.my-movies-page .follow-badge .release-date {
+  margin-left: 0.5rem;
+  font-weight: 400;
+  opacity: 0.8;
+  font-size: 0.7rem;
+  letter-spacing: 0.01em;
+}
+
+.my-movies-page .follow-badge .release-date.tba {
+  font-style: italic;
+  opacity: 0.6;
+  font-weight: 300;
+}
+
 /* Follow Actions */
 .my-movies-page .follow-actions {
   display: flex;

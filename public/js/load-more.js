@@ -91,10 +91,29 @@ class LoadMoreManager {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
     
-    // Append each movie card to the grid
-    while (tempDiv.firstChild) {
-      this.moviesGrid.appendChild(tempDiv.firstChild);
-    }
+    // Get all movie cards from the new HTML
+    const newCards = tempDiv.querySelectorAll('.movie-card');
+    
+    // Find the load more button to insert before it
+    const loadMoreContainer = this.moviesGrid.querySelector('.load-more-grid-item');
+    
+    // Add each card with animation class
+    newCards.forEach((card, index) => {
+      // Add animation class for staggered fade-in
+      card.classList.add('loading-animation');
+      
+      // Insert before the load more button instead of appending at end
+      if (loadMoreContainer) {
+        this.moviesGrid.insertBefore(card, loadMoreContainer);
+      } else {
+        this.moviesGrid.appendChild(card);
+      }
+      
+      // Remove animation class after animation completes to clean up DOM
+      setTimeout(() => {
+        card.classList.remove('loading-animation');
+      }, 1500); // Wait for all animations to complete (max delay + animation duration)
+    });
   }
 
   updateMovieCount(count) {
@@ -148,7 +167,8 @@ function getPageConfig() {
       endpoint: '/load-more-releases',
       params: {
         sort: urlParams.get('sort') || 'popularity',
-        genre: urlParams.get('genre') || ''
+        genre: urlParams.get('genre') || '',
+        initialPagesUsed: window.initialPagesUsed || 3
       }
     };
   }

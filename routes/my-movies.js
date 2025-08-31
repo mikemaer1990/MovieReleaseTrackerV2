@@ -38,10 +38,24 @@ router.get("/", async (req, res) => {
       const followType = record.fields.FollowType.toLowerCase();
 
       if (!moviesMap.has(tmdbId)) {
+        // Format release date properly
+        let formattedReleaseDate = '';
+        if (record.fields.ReleaseDate) {
+          try {
+            const date = new Date(record.fields.ReleaseDate);
+            if (!isNaN(date.getTime())) {
+              formattedReleaseDate = date.toISOString().split('T')[0];
+            }
+          } catch (error) {
+            console.warn(`Invalid date format for movie ${record.fields.Title}:`, record.fields.ReleaseDate);
+          }
+        }
+        
         moviesMap.set(tmdbId, {
           id: tmdbId,
           title: record.fields.Title,
-          releaseDate: record.fields.ReleaseDate,
+          releaseDate: formattedReleaseDate,
+          streamingReleaseDate: record.fields.StreamingReleaseDate || null,
           posterPath: record.fields.PosterPath,
           followTypes: [],
           airtableRecords: [],
@@ -54,6 +68,18 @@ router.get("/", async (req, res) => {
         id: record.id,
         followType: followType,
       });
+      
+      // Update streaming date if this record has one and we don't have it yet
+      if (!movie.streamingReleaseDate && record.fields.StreamingReleaseDate) {
+        try {
+          const streamingDate = new Date(record.fields.StreamingReleaseDate);
+          if (!isNaN(streamingDate.getTime())) {
+            movie.streamingReleaseDate = record.fields.StreamingReleaseDate;
+          }
+        } catch (error) {
+          console.warn(`Invalid streaming date format for movie ${record.fields.Title}:`, record.fields.StreamingReleaseDate);
+        }
+      }
     });
 
     const consolidatedMovies = Array.from(moviesMap.values());

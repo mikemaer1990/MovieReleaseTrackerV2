@@ -1,0 +1,200 @@
+/* ============================
+   Page Module System
+   Modular card-based layout for consistent page structure
+============================ */
+
+/* Page Container */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* Module Header */
+.module-header {
+  background: linear-gradient(135deg, var(--color-bg-tertiary) 0%, var(--color-bg-secondary) 100%);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-2xl);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.page-title {
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 2.25rem;
+  margin: 0 0 var(--spacing-sm) 0;
+  background: var(--gradient-title);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.02em;
+}
+
+.page-subtitle {
+  font-size: 1.125rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+/* Module Controls */
+.module-controls {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  overflow: visible; /* Allow dropdowns to show outside */
+  position: relative;
+  z-index: 1;
+}
+
+
+
+.controls-content {
+  padding: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.controls-content .filter-controls {
+  margin: 0;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  padding: 0;
+}
+
+/* Ensure dropdowns appear above all modules */
+.module-controls .custom-dropdown {
+  position: relative;
+  z-index: 1000;
+}
+
+.module-controls .custom-dropdown.open {
+  z-index: 15000; /* Higher than the default dropdown z-index */
+}
+
+.module-controls .dropdown-menu {
+  z-index: 15001; /* Ensure menu is above the open dropdown */
+}
+
+/* Module Content */
+.module-content {
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.content-header {
+  background: linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-bg-tertiary) 100%);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.results-count {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.results-count #moviesCount {
+  color: var(--color-gold-medium);
+  font-weight: 700;
+  font-size: 1.1em;
+}
+
+.content-main {
+  padding: var(--spacing-lg);
+}
+
+.content-main .grid-container {
+  padding: 0;
+  display: block;
+}
+
+.content-footer {
+  background: transparent;
+  border: none;
+  padding: var(--spacing-lg) 0;
+  text-align: center;
+}
+
+.content-footer .load-more-container {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-3xl) var(--spacing-xl);
+  color: var(--color-text-secondary);
+}
+
+.empty-state p {
+  font-size: 1.1rem;
+  margin: 0;
+  opacity: 0.8;
+}
+
+/* Follow Message */
+.follow-message {
+  background: linear-gradient(135deg, rgba(196, 167, 71, 0.1) 0%, rgba(196, 167, 71, 0.05) 100%);
+  border: 1px solid rgba(196, 167, 71, 0.2);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  text-align: center;
+}
+
+.follow-message .follow-msg {
+  color: var(--color-gold-medium);
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .page-container {
+    padding: var(--spacing-lg) var(--spacing-md);
+    gap: var(--spacing-lg);
+  }
+  
+  .page-title {
+    font-size: 1.875rem;
+  }
+  
+  .page-subtitle {
+    font-size: 1rem;
+  }
+  
+  .module-header,
+  .controls-content,
+  .content-main,
+  .content-footer {
+    padding: var(--spacing-lg);
+  }
+  
+  .controls-header {
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+  
+  .controls-header h2 {
+    font-size: 1.125rem;
+  }
+}

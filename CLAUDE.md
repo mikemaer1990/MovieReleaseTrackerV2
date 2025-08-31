@@ -132,7 +132,7 @@ PORT=3000 (optional)
 - **Invalidation**: Explicit cache clearing on follow/unfollow operations
 - **Location**: All caching logic centralized in `services/cache.js`
 
-<!-- ## Visual Development & Testing
+## Visual Development & Testing
 
 ### Design System
 
@@ -212,6 +212,7 @@ When implementing UI features, verify:
 ### When to Use Automated Visual Testing
 
 **Use Quick Visual Check for:**
+
 - Every front-end change, no matter how small
 - After implementing new components or features
 - When modifying existing UI elements
@@ -219,6 +220,7 @@ When implementing UI features, verify:
 - Before committing UI changes
 
 **Use Comprehensive Design Review for:**
+
 - Major feature implementations
 - Before creating pull requests with UI changes
 - When refactoring component architecture
@@ -226,8 +228,9 @@ When implementing UI features, verify:
 - When accessibility compliance is critical
 
 **Skip Visual Testing for:**
+
 - Backend-only changes (API, database)
 - Configuration file updates
 - Documentation changes
 - Test file modifications
-- Non-visual utility functions -->
+- Non-visual utility functions

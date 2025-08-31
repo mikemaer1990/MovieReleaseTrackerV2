@@ -23,9 +23,6 @@
   </a>
 
   <h3 class="movie-title"><%= movie.title %></h3>
-  <p class="movie-date">
-    <time datetime="<%= movie.releaseDate %>"><%= movie.releaseDate %></time>
-  </p>
 
   <div class="follow-status">
     <%- include('_follow-badges', { movie }) %> <%- include('_follow-actions', {

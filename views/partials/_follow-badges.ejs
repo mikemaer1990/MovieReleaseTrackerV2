@@ -5,10 +5,33 @@
     aria-label="Following theatrical release"
   >
     🎭 Theatrical
+    <% if (movie.releaseDate) { %>
+      <span class="release-date">• <%= movie.releaseDate %></span>
+    <% } else { %>
+      <span class="release-date tba">• TBA</span>
+    <% } %>
   </span>
   <% } %> <% if (movie.followTypes.includes('streaming')) { %>
   <span class="follow-badge streaming" aria-label="Following streaming release">
     📺 Streaming
+    <% 
+    let streamingDate = '';
+    if (movie.streamingReleaseDate) {
+      try {
+        const date = new Date(movie.streamingReleaseDate);
+        if (!isNaN(date.getTime())) {
+          streamingDate = date.toISOString().split('T')[0];
+        }
+      } catch (error) {
+        streamingDate = '';
+      }
+    }
+    %>
+    <% if (streamingDate) { %>
+      <span class="release-date">• <%= streamingDate %></span>
+    <% } else { %>
+      <span class="release-date tba">• TBA</span>
+    <% } %>
   </span>
   <% } %>
 </div>

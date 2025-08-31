@@ -1,0 +1,48 @@
+<div class="module-content">
+  
+  <div class="content-main">
+    <% if ((movies || []).length > 0) { %>
+      <div class="grid-container">
+        <div class="results-grid">
+          <% movies.forEach(movie => { %>
+            <%- include('_results-movie-card', { 
+              movie, 
+              user: user || null, 
+              followedMovieIds: followedMovieIds || null, 
+              query: query || '', 
+              showFollowButton: showFollowButton || false 
+            }) %>
+          <% }); %>
+          
+          <% if (showLoadMore && (movies || []).length > 0) { %>
+            <div class="load-more-grid-item" id="loadMoreContainer">
+              <span class="movies-loaded-count"><span id="moviesCount"><%= movies ? movies.length : 0 %></span> movies loaded</span>
+              <button class="load-more-btn" id="loadMoreBtn">
+                <span class="load-text">Load More Movies</span>
+                <span class="load-spinner" style="display:none;">
+                  <svg width="20" height="20" viewBox="0 0 50 50">
+                    <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.416" stroke-dashoffset="31.416">
+                      <animate attributeName="stroke-array" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                      <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                    </circle>
+                  </svg>
+                  Loading...
+                </span>
+              </button>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    <% } else { %>
+      <div class="empty-state">
+        <% if (emptyMessage) { %>
+          <p><%= emptyMessage %></p>
+        <% } else if (query) { %>
+          <p>No results found for "<%= query %>".</p>
+        <% } else { %>
+          <p>No movies found.</p>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+</div>

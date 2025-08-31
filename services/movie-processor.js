@@ -1,5 +1,6 @@
 const { getStreamingReleaseDate } = require("./tmdb");
 const { toUtcMidnight } = require("../utils/date-helpers");
+const axios = require("axios");
 
 /**
  * Movie Processing Service
@@ -19,7 +20,26 @@ async function processMovieWithDates(movie, options = {}) {
   // Fetch streaming date
   const streamingDateRaw = await getStreamingReleaseDate(movie.id);
   const streamingDate = streamingDateRaw ? new Date(streamingDateRaw) : null;
-  const theatricalDate = movie.release_date ? new Date(movie.release_date) : null;
+  
+  // For releases, fetch proper theatrical date from movie details API
+  // since discover API with release_type filter returns streaming dates
+  let theatricalDate = null;
+  if (options.type === 'releases') {
+    try {
+      const movieDetails = await axios.get(
+        `https://api.themoviedb.org/3/movie/${movie.id}`,
+        { params: { api_key: process.env.TMDB_API_KEY } }
+      );
+      theatricalDate = movieDetails.data.release_date
+        ? new Date(movieDetails.data.release_date)
+        : null;
+    } catch (error) {
+      console.error(`Error fetching theatrical date for movie ${movie.id}:`, error);
+      theatricalDate = movie.release_date ? new Date(movie.release_date) : null;
+    }
+  } else {
+    theatricalDate = movie.release_date ? new Date(movie.release_date) : null;
+  }
 
   // Convert to midnight for consistent comparisons
   const streamingDateMidnight = streamingDate ? toUtcMidnight(streamingDate) : null;
@@ -28,6 +48,7 @@ async function processMovieWithDates(movie, options = {}) {
   // Base processed movie object
   const processedMovie = {
     ...movie,
+    release_date: theatricalDate ? theatricalDate.toISOString().split('T')[0] : movie.release_date, // Use proper theatrical date
     streamingDateRaw,
     streamingDate: streamingDateMidnight,
     theatricalDate: theatricalDateMidnight,
@@ -65,9 +86,12 @@ async function processMovieWithDates(movie, options = {}) {
   }
 
   if (options.type === 'upcoming') {
-    processedMovie.canFollow = 
-      (streamingDateMidnight && streamingDateMidnight > now) ||
-      (theatricalDateMidnight && theatricalDateMidnight > now);
+    // Include movies with any future date OR no dates (trust TMDB's upcoming API)
+    const hasFutureDate = (streamingDateMidnight && streamingDateMidnight > now) ||
+                         (theatricalDateMidnight && theatricalDateMidnight > now) ||
+                         (!streamingDateMidnight && !theatricalDateMidnight);
+    
+    processedMovie.canFollow = hasFutureDate;
 
     processedMovie.displayDate = streamingDateMidnight
       ? streamingDateMidnight.toISOString().split("T")[0]

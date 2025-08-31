@@ -20,12 +20,10 @@
             <span class="release-date"><%= new Date(movie.release_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
           </div>
         <% } %>
-        <% if (movie.streaming_date) { %>
-          <div class="hero-streaming-date">
-            <span class="streaming-label">📺 Streaming</span>
-            <span class="streaming-date"><%= new Date(movie.streaming_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
-          </div>
-        <% } %>
+        <div class="hero-streaming-date">
+          <span class="streaming-label">📺 Streaming</span>
+          <span class="streaming-date"><%= movie.streaming_date ? new Date(movie.streaming_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'TBA' %></span>
+        </div>
       </div>
     </div>
   </div>
@@ -44,49 +42,47 @@
         <h3>Movie Info</h3>
         
         <div class="info-item">
-          <span class="info-label">Rating</span>
+          <span class="info-label"><span class="info-icon">⭐</span>Rating</span>
           <span class="info-value">
             <span class="rating-score"><%= movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A' %>/10</span>
           </span>
         </div>
         
         <div class="info-item">
-          <span class="info-label">Release Date</span>
-          <span class="info-value"><%= movie.release_date ? new Date(movie.release_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'TBA' %></span>
+          <span class="info-label"><span class="info-icon">📅</span>Release Date</span>
+          <span class="info-value info-value-date"><%= movie.release_date ? new Date(movie.release_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'TBA' %></span>
         </div>
         
-        <% if (movie.streaming_date) { %>
         <div class="info-item">
-          <span class="info-label">Streaming Date</span>
-          <span class="info-value"><%= new Date(movie.streaming_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+          <span class="info-label"><span class="info-icon">📺</span>Streaming Date</span>
+          <span class="info-value info-value-date"><%= movie.streaming_date ? new Date(movie.streaming_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'TBA' %></span>
         </div>
-        <% } %>
         
         <% if (movie.runtime) { %>
         <div class="info-item">
-          <span class="info-label">Runtime</span>
-          <span class="info-value"><%= Math.floor(movie.runtime / 60) %>h <%= movie.runtime % 60 %>m</span>
+          <span class="info-label"><span class="info-icon">⏱️</span>Runtime</span>
+          <span class="info-value info-value-runtime"><%= Math.floor(movie.runtime / 60) %>h <%= movie.runtime % 60 %>m</span>
         </div>
         <% } %>
         
         <% if (movie.genres && movie.genres.length > 0) { %>
         <div class="info-item">
-          <span class="info-label">Genres</span>
-          <span class="info-value"><%= movie.genres.map(g => g.name).join(', ') %></span>
+          <span class="info-label"><span class="info-icon">🎭</span>Genres</span>
+          <span class="info-value info-value-genres"><%= movie.genres.map(g => g.name).join(', ') %></span>
         </div>
         <% } %>
         
         <% if (movie.budget && movie.budget > 0) { %>
         <div class="info-item">
-          <span class="info-label">Budget</span>
-          <span class="info-value">$<%= movie.budget.toLocaleString() %></span>
+          <span class="info-label"><span class="info-icon">💰</span>Budget</span>
+          <span class="info-value info-value-money">$<%= movie.budget.toLocaleString() %></span>
         </div>
         <% } %>
         
         <% if (movie.revenue && movie.revenue > 0) { %>
         <div class="info-item">
-          <span class="info-label">Revenue</span>
-          <span class="info-value">$<%= movie.revenue.toLocaleString() %></span>
+          <span class="info-label"><span class="info-icon">💵</span>Revenue</span>
+          <span class="info-value info-value-money">$<%= movie.revenue.toLocaleString() %></span>
         </div>
         <% } %>
       </div>
