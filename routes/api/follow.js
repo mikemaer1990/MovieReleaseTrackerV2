@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { userActionLimiter } = require("../../middleware/rate-limiting");
 const { getStreamingReleaseDate } = require("../../services/tmdb");
 const { followMovie, unfollowMovie } = require("../../services/airtable");
 const { clearCache } = require("../../services/cache");
@@ -7,7 +8,7 @@ const { clearCache } = require("../../services/cache");
 const validFollowTypes = ["theatrical", "streaming", "both"];
 
 // Follow movie route
-router.post("/follow", async (req, res) => {
+router.post("/follow", userActionLimiter, async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({
       success: false,
@@ -69,7 +70,7 @@ router.post("/follow", async (req, res) => {
 });
 
 // Unfollow movie route
-router.post("/unfollow", async (req, res) => {
+router.post("/unfollow", userActionLimiter, async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({
       success: false,

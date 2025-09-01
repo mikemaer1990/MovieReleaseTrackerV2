@@ -6,6 +6,9 @@ const expressLayouts = require("express-ejs-layouts");
 
 dotenv.config();
 
+// Rate limiting middleware
+const { authLimiter, userActionLimiter, dataRetrievalLimiter, strictLimiter } = require('./middleware/rate-limiting');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -78,18 +81,25 @@ const checkStreamingDatesRouter = require("./routes/check-streaming-dates");
 // ADD: Centralized API routes
 const apiRoutes = require("./routes/api");
 
-app.use("/", indexRoutes);
-app.use("/", searchResultsRouter);
-app.use("/", upcomingRouter);
-app.use("/auth", authRoutes);
-app.use("/my-movies", myMoviesRouter);
-app.use("/jobs/check-releases", checkReleases);
-app.use("/movie", movieDetailsRoutes);
-app.use("/", topReleasesRouter);
-app.use("/jobs/check-streaming-dates", checkStreamingDatesRouter);
+// Admin routes for rate limiting
+const adminRoutes = require("./routes/api/admin");
 
-// Mount API routes (this handles /follow and /unfollow)
+// Apply rate limiting to routes
+app.use("/", dataRetrievalLimiter, indexRoutes);
+app.use("/", dataRetrievalLimiter, searchResultsRouter);
+app.use("/", dataRetrievalLimiter, upcomingRouter);
+app.use("/auth", authLimiter, authRoutes);
+app.use("/my-movies", dataRetrievalLimiter, myMoviesRouter);
+app.use("/jobs/check-releases", checkReleases); // No rate limiting for cron jobs
+app.use("/movie", dataRetrievalLimiter, movieDetailsRoutes);
+app.use("/", dataRetrievalLimiter, topReleasesRouter);
+app.use("/jobs/check-streaming-dates", checkStreamingDatesRouter); // No rate limiting for cron jobs
+
+// Mount API routes (rate limiting applied at route level)
 app.use("/", apiRoutes);
+
+// Admin routes
+app.use("/api/admin", strictLimiter, adminRoutes);
 
 // 404 handler
 app.use((req, res) => {

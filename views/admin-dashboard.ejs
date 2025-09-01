@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate Limiting Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #334155;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .header h1 {
+            color: #1e293b;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #64748b;
+            font-size: 1.1rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid #10b981;
+        }
+        
+        .stat-card.warning {
+            border-left-color: #f59e0b;
+        }
+        
+        .stat-card.danger {
+            border-left-color: #ef4444;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 0.25rem;
+        }
+        
+        .stat-description {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        .data-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        
+        .section-header {
+            padding: 1.5rem;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #475569;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        td {
+            color: #334155;
+        }
+        
+        tr:hover {
+            background: #f8fafc;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .badge-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #f1f5f9;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-fill.warning {
+            background: #f59e0b;
+        }
+        
+        .progress-fill.danger {
+            background: #ef4444;
+        }
+        
+        .controls {
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+        }
+        
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+        
+        .timestamp {
+            text-align: right;
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Rate Limiting Dashboard</h1>
+            <p>Monitor API usage, rate limit hits, and system performance</p>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-primary" onclick="refreshData()">🔄 Refresh Data</button>
+            <button class="btn btn-secondary" onclick="toggleAutoRefresh()">⏰ Auto Refresh: <span id="autoRefreshStatus">Off</span></button>
+            <button class="btn btn-danger" onclick="resetStats()" title="Reset all statistics">🗑️ Reset Stats</button>
+            <a href="/" class="btn btn-secondary">← Back to Site</a>
+        </div>
+        
+        <div id="loading" class="loading">
+            Loading dashboard data...
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div id="dashboard" style="display: none;">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card" id="totalRequestsCard">
+                    <div class="stat-label">Total Requests</div>
+                    <div class="stat-value" id="totalRequests">0</div>
+                    <div class="stat-description">Since server start</div>
+                </div>
+                
+                <div class="stat-card" id="rateLimitHitsCard">
+                    <div class="stat-label">Rate Limit Hits</div>
+                    <div class="stat-value" id="rateLimitHits">0</div>
+                    <div class="stat-description">
+                        <span id="rateLimitPercentage">0%</span> of total requests
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Requests Per Minute</div>
+                    <div class="stat-value" id="requestsPerMinute">0</div>
+                    <div class="stat-description">Current rate</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Uptime</div>
+                    <div class="stat-value" id="uptime">0s</div>
+                    <div class="stat-description">Server running time</div>
+                </div>
+            </div>
+            
+            <!-- Top Endpoints -->
+            <div class="data-section">
+                <div class="section-header">
+                    <div class="section-title">Top Endpoints</div>
+                </div>
+                <div class="table-container">
+                    <table id="endpointsTable">
+                        <thead>
+                            <tr>
+                                <th>Endpoint</th>
+                                <th>Requests</th>
+                                <th>Rate Limit Hits</th>
+                                <th>Hit Rate</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="endpointsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Top Offending IPs -->
+            <div class="data-section">
+                <div class="section-header">
+                    <div class="section-title">Top Rate Limited IPs</div>
+                </div>
+                <div class="table-container" id="ipsTableContainer">
+                    <table id="ipsTable">
+                        <thead>
+                            <tr>
+                                <th>IP Address</th>
+                                <th>Total Requests</th>
+                                <th>Rate Limit Hits</th>
+                                <th>Hit Rate</th>
+                                <th>Risk Level</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ipsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="timestamp" id="lastUpdated"></div>
+        </div>
+    </div>
+
+    <script>
+        let autoRefreshInterval = null;
+        let isAutoRefresh = false;
+        
+        // Get admin secret from URL or prompt
+        const urlParams = new URLSearchParams(window.location.search);
+        let adminSecret = urlParams.get('admin_secret');
+        
+        if (!adminSecret) {
+            adminSecret = prompt('Enter admin secret:');
+            if (adminSecret) {
+                // Update URL with admin secret
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('admin_secret', adminSecret);
+                window.history.replaceState({}, '', newUrl);
+            }
+        }
+        
+        async function fetchStats() {
+            if (!adminSecret) {
+                showError('Admin secret required');
+                return null;
+            }
+            
+            try {
+                const response = await fetch(`/api/admin/rate-limit-stats?admin_secret=${encodeURIComponent(adminSecret)}`);
+                
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        throw new Error('Invalid admin secret');
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                return result.data;
+            } catch (error) {
+                throw error;
+            }
+        }
+        
+        function formatUptime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (hours > 0) {
+                return `${hours}h ${minutes}m ${secs}s`;
+            } else if (minutes > 0) {
+                return `${minutes}m ${secs}s`;
+            } else {
+                return `${secs}s`;
+            }
+        }
+        
+        function updateDashboard(data) {
+            // Update stats
+            document.getElementById('totalRequests').textContent = data.totalRequests.toLocaleString();
+            document.getElementById('rateLimitHits').textContent = data.rateLimitHits.toLocaleString();
+            document.getElementById('rateLimitPercentage').textContent = data.rateLimitPercentage + '%';
+            document.getElementById('requestsPerMinute').textContent = data.requestsPerMinute.toFixed(1);
+            document.getElementById('uptime').textContent = formatUptime(data.uptime);
+            
+            // Update card colors based on thresholds
+            const rateLimitCard = document.getElementById('rateLimitHitsCard');
+            if (data.rateLimitPercentage > 10) {
+                rateLimitCard.className = 'stat-card danger';
+            } else if (data.rateLimitPercentage > 5) {
+                rateLimitCard.className = 'stat-card warning';
+            } else {
+                rateLimitCard.className = 'stat-card';
+            }
+            
+            // Update endpoints table
+            const endpointsBody = document.getElementById('endpointsTableBody');
+            endpointsBody.innerHTML = '';
+            
+            if (data.topEndpoints && data.topEndpoints.length > 0) {
+                data.topEndpoints.forEach(endpoint => {
+                    const hitRate = endpoint.requests > 0 ? ((endpoint.rateLimitHits / endpoint.requests) * 100).toFixed(1) : '0.0';
+                    const row = document.createElement('tr');
+                    
+                    let statusBadge = 'badge-success';
+                    let statusText = 'Normal';
+                    
+                    if (parseFloat(hitRate) > 20) {
+                        statusBadge = 'badge-danger';
+                        statusText = 'High Risk';
+                    } else if (parseFloat(hitRate) > 10) {
+                        statusBadge = 'badge-warning';
+                        statusText = 'Warning';
+                    }
+                    
+                    row.innerHTML = `
+                        <td><code>${endpoint.endpoint}</code></td>
+                        <td>${endpoint.requests.toLocaleString()}</td>
+                        <td>${endpoint.rateLimitHits.toLocaleString()}</td>
+                        <td>${hitRate}%</td>
+                        <td><span class="badge ${statusBadge}">${statusText}</span></td>
+                    `;
+                    endpointsBody.appendChild(row);
+                });
+            } else {
+                endpointsBody.innerHTML = '<tr><td colspan="5" class="empty-state">No endpoint data available</td></tr>';
+            }
+            
+            // Update IPs table
+            const ipsBody = document.getElementById('ipsTableBody');
+            const ipsContainer = document.getElementById('ipsTableContainer');
+            ipsBody.innerHTML = '';
+            
+            if (data.topOffendingIPs && data.topOffendingIPs.length > 0) {
+                data.topOffendingIPs.forEach(ipData => {
+                    const hitRate = ipData.requests > 0 ? ((ipData.rateLimitHits / ipData.requests) * 100).toFixed(1) : '0.0';
+                    const row = document.createElement('tr');
+                    
+                    let riskBadge = 'badge-warning';
+                    let riskText = 'Medium';
+                    
+                    if (ipData.rateLimitHits > 50) {
+                        riskBadge = 'badge-danger';
+                        riskText = 'High';
+                    } else if (ipData.rateLimitHits < 10) {
+                        riskBadge = 'badge-success';
+                        riskText = 'Low';
+                    }
+                    
+                    row.innerHTML = `
+                        <td><code>${ipData.ip}</code></td>
+                        <td>${ipData.requests.toLocaleString()}</td>
+                        <td>${ipData.rateLimitHits.toLocaleString()}</td>
+                        <td>${hitRate}%</td>
+                        <td><span class="badge ${riskBadge}">${riskText}</span></td>
+                    `;
+                    ipsBody.appendChild(row);
+                });
+            } else {
+                ipsBody.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="empty-state-icon">🎉</div>No rate limited IPs</td></tr>';
+            }
+            
+            // Update timestamp
+            document.getElementById('lastUpdated').textContent = `Last updated: ${new Date(data.timestamp).toLocaleString()}`;
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+        
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+        
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+        }
+        
+        async function refreshData() {
+            showLoading();
+            hideError();
+            
+            try {
+                const data = await fetchStats();
+                if (data) {
+                    updateDashboard(data);
+                    hideLoading();
+                }
+            } catch (error) {
+                console.error('Failed to fetch stats:', error);
+                showError(`Failed to fetch stats: ${error.message}`);
+                hideLoading();
+            }
+        }
+        
+        function toggleAutoRefresh() {
+            if (isAutoRefresh) {
+                clearInterval(autoRefreshInterval);
+                isAutoRefresh = false;
+                document.getElementById('autoRefreshStatus').textContent = 'Off';
+            } else {
+                autoRefreshInterval = setInterval(refreshData, 30000); // 30 seconds
+                isAutoRefresh = true;
+                document.getElementById('autoRefreshStatus').textContent = 'On (30s)';
+            }
+        }
+        
+        async function resetStats() {
+            if (!confirm('Are you sure you want to reset all rate limiting statistics? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/admin/reset-rate-limit-stats?admin_secret=${encodeURIComponent(adminSecret)}`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('Statistics reset successfully');
+                    refreshData();
+                } else {
+                    throw new Error(result.message || 'Reset failed');
+                }
+            } catch (error) {
+                alert(`Failed to reset stats: ${error.message}`);
+            }
+        }
+        
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (adminSecret) {
+                refreshData();
+            } else {
+                showError('Admin secret required to access dashboard');
+            }
+        });
+    </script>
+</body>
+</html>

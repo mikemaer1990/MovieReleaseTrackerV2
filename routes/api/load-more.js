@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { dataRetrievalLimiter } = require("../../middleware/rate-limiting");
 const { discoverMovies, searchMovies, getUpcomingMovies } = require("../../services/tmdb");
 const { toUtcMidnight } = require("../../utils/date-helpers");
 const { processMoviesWithDates, filterMovies, sortMovies, deduplicateMovies } = require("../../services/movie-processor");
@@ -7,7 +8,7 @@ const { renderMovieCards, createLoadMoreResponse, createErrorResponse } = requir
 const { getFollowedMoviesByUserId } = require("../../services/airtable");
 
 // Load more releases endpoint
-router.get("/load-more-releases", async (req, res) => {
+router.get("/load-more-releases", dataRetrievalLimiter, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 2;
     const sortBy = req.query.sort || "popularity";
@@ -97,7 +98,7 @@ router.get("/load-more-releases", async (req, res) => {
 });
 
 // Load more search results endpoint
-router.get("/load-more-search", async (req, res) => {
+router.get("/load-more-search", dataRetrievalLimiter, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 2;
     const query = req.query.query;
@@ -151,7 +152,7 @@ router.get("/load-more-search", async (req, res) => {
 });
 
 // Load more upcoming movies endpoint
-router.get("/load-more-upcoming", async (req, res) => {
+router.get("/load-more-upcoming", dataRetrievalLimiter, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 2;
     const initialPagesUsed = parseInt(req.query.initialPagesUsed) || 3;
