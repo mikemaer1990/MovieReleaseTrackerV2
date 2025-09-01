@@ -125,9 +125,11 @@ function filterMovies(movies, filterOptions = {}) {
   // Apply type-specific filtering
   if (type === 'releases') {
     filtered = filtered.filter(movie => movie.hasRecentStreaming);
-  } else if (type === 'search' || type === 'upcoming') {
+  } else if (type === 'upcoming') {
     filtered = filtered.filter(movie => movie.canFollow);
   }
+  // For search results, don't filter by canFollow - show all results
+  // The canFollow property is still set correctly for the follow buttons
 
   // Apply genre filtering if specified
   if (genre) {

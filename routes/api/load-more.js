@@ -66,7 +66,7 @@ router.get("/load-more-releases", async (req, res) => {
     if (req.session && req.session.userId) {
       try {
         const followedMovies = await getFollowedMoviesByUserId(req.session.userId);
-        followedMovieIds = followedMovies.map(movie => Number(movie.TMDB_ID));
+        followedMovieIds = followedMovies.map(record => Number(record.fields.TMDB_ID));
       } catch (error) {
         console.error('Error getting followed movies for load-more:', error);
       }
@@ -119,7 +119,7 @@ router.get("/load-more-search", async (req, res) => {
     if (req.session && req.session.userId) {
       try {
         const followedMovies = await getFollowedMoviesByUserId(req.session.userId);
-        followedMovieIds = followedMovies.map(movie => Number(movie.TMDB_ID));
+        followedMovieIds = followedMovies.map(record => Number(record.fields.TMDB_ID));
       } catch (error) {
         console.error('Error getting followed movies for load-more:', error);
       }
@@ -199,7 +199,7 @@ router.get("/load-more-upcoming", async (req, res) => {
     if (req.session && req.session.userId) {
       try {
         const followedMovies = await getFollowedMoviesByUserId(req.session.userId);
-        followedMovieIds = followedMovies.map(movie => Number(movie.TMDB_ID));
+        followedMovieIds = followedMovies.map(record => Number(record.fields.TMDB_ID));
       } catch (error) {
         console.error('Error getting followed movies for load-more:', error);
       }

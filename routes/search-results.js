@@ -14,7 +14,6 @@ router.get("/search", async (req, res) => {
     // Load only the first page for initial load using centralized service
     const response = await searchMovies(query, 1);
     let results = response.results;
-
     results.sort((a, b) => sortByRelevanceAndPopularity(a, b, query));
 
     // Process movies with dates using the centralized service
