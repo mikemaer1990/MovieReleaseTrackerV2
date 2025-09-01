@@ -22,8 +22,11 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false,
-    }, // true in production with HTTPS
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: "lax",
+    },
   })
 );
 
@@ -74,7 +77,7 @@ app.use("/", searchResultsRouter);
 app.use("/", upcomingRouter);
 app.use("/auth", authRoutes);
 app.use("/my-movies", myMoviesRouter);
-app.use("/check-releases", checkReleases);
+app.use("/jobs/check-releases", checkReleases);
 app.use("/movie", movieDetailsRoutes);
 app.use("/", topReleasesRouter);
 app.use("/jobs/check-streaming-dates", checkStreamingDatesRouter);

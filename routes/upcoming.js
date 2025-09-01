@@ -1,11 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const axios = require("axios");
-const { getStreamingReleaseDate } = require("../services/tmdb");
 const { getFollowedMoviesByUserId } = require("../services/airtable");
+const { processMoviesWithDates, filterMovies, deduplicateMovies } = require("../services/movie-processor");
+const { getUpcomingMovies } = require("../services/tmdb");
 const { toUtcMidnight } = require("../utils/date-helpers");
-// Caching
-const { getCachedData, setCachedData } = require("../services/cache");
 router.get("/upcoming", async (req, res) => {
   const followMessage = req.query.followMessage || null;
   const moviesPerPage = 20;
@@ -22,64 +20,17 @@ router.get("/upcoming", async (req, res) => {
       collectedMovies.length < moviesPerPage &&
       tmdbPage <= 5 // Allow up to 5 pages for initial collection
     ) {
-      const response = await axios.get(
-        `https://api.themoviedb.org/3/movie/upcoming`,
-        {
-          params: {
-            api_key: process.env.TMDB_API_KEY,
-            page: tmdbPage,
-            region: "US",
-          },
-        }
-      );
+      const response = await getUpcomingMovies(tmdbPage, "US");
 
-      totalTmdbPages = response.data.total_pages;
-      const results = response.data.results;
+      totalTmdbPages = response.total_pages;
+      const results = response.results;
 
-      const processedMovies = await Promise.all(
-        results.map(async (movie) => {
-          const streamingDateRaw = await getStreamingReleaseDate(movie.id);
-          const streamingDate = streamingDateRaw
-            ? new Date(streamingDateRaw)
-            : null;
-          const theatricalDate = movie.release_date
-            ? new Date(movie.release_date)
-            : null;
-
-          const streamingDateMidnight = streamingDate
-            ? toUtcMidnight(streamingDate)
-            : null;
-          const theatricalDateMidnight = theatricalDate
-            ? toUtcMidnight(theatricalDate)
-            : null;
-
-          const canFollow =
-            (streamingDateMidnight && streamingDateMidnight > now) ||
-            (theatricalDateMidnight && theatricalDateMidnight > now);
-
-          let displayDate = "Coming Soon";
-          if (streamingDateMidnight) {
-            displayDate = streamingDateMidnight.toISOString().split("T")[0];
-          } else if (theatricalDateMidnight) {
-            displayDate =
-              theatricalDateMidnight.toISOString().split("T")[0] +
-              " (Theatrical)";
-          }
-
-          return {
-            ...movie,
-            streamingDateRaw,
-            canFollow,
-            displayDate,
-          };
-        })
-      );
-
-      const newFiltered = processedMovies.filter(
-        (movie) =>
-          movie.canFollow &&
-          !collectedMovies.some((colMovie) => colMovie.id === movie.id)
-      );
+      // Process movies with dates using the centralized service
+      const processedMovies = await processMoviesWithDates(results, { type: 'upcoming' });
+      
+      // Filter movies that can be followed and deduplicate using shared utility
+      const filteredMovies = filterMovies(processedMovies, { type: 'upcoming' });
+      const newFiltered = deduplicateMovies(filteredMovies, collectedMovies);
 
       collectedMovies.push(...newFiltered);
       tmdbPage++;
@@ -103,12 +54,8 @@ router.get("/upcoming", async (req, res) => {
         airtableRecordId: req.session.airtableRecordId,
       };
 
-      const cacheKey = `followedMovies_${req.session.userId}`;
-      let followedRecords = getCachedData(cacheKey);
-      if (!followedRecords) {
-        followedRecords = await getFollowedMoviesByUserId(req.session.userId);
-        setCachedData(cacheKey, followedRecords, 600); // 10 mins TTL
-      }
+      // Get followed movies (caching handled by service layer)
+      const followedRecords = await getFollowedMoviesByUserId(req.session.userId);
 
       followedMovieIds = followedRecords.map((record) =>
         Number(record.fields.TMDB_ID)

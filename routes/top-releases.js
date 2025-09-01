@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const axios = require("axios");
-const { getStreamingReleaseDate } = require("../services/tmdb");
+const { processMoviesWithDates, filterMovies, sortMovies } = require("../services/movie-processor");
+const { discoverMovies, getGenres } = require("../services/tmdb");
 const { toUtcMidnight } = require("../utils/date-helpers");
 
 const RESULTS_PER_PAGE = 20; // Consistent results per page
@@ -34,9 +34,6 @@ router.get("/top-releases", async (req, res) => {
         // Use popularity for server-side, then sort by streamingDate client-side
         tmdbSortBy = "popularity.desc";
         break;
-      case "oldest":
-        tmdbSortBy = "release_date.asc";
-        break;
       case "popularity":
       default:
         tmdbSortBy = "popularity.desc";
@@ -64,111 +61,21 @@ router.get("/top-releases", async (req, res) => {
         apiParams.with_genres = genre;
       }
 
-      const response = await axios.get(
-        `https://api.themoviedb.org/3/discover/movie`,
-        { params: apiParams }
-      );
+      const response = await discoverMovies(apiParams);
 
-      let results = response.data.results;
+      let results = response.results;
 
-      // Process movies with streaming dates
-      const processedMovies = await Promise.all(
-        results.map(async (movie) => {
-          const streamingDateRaw = await getStreamingReleaseDate(movie.id);
-          const streamingDate = streamingDateRaw
-            ? new Date(streamingDateRaw)
-            : null;
-          
-          // Get the actual theatrical release date from movie details API
-          // since discover API returns streaming date when filtering by release_type
-          let theatricalDate = null;
-          try {
-            const movieDetails = await axios.get(
-              `https://api.themoviedb.org/3/movie/${movie.id}`,
-              { params: { api_key: process.env.TMDB_API_KEY } }
-            );
-            theatricalDate = movieDetails.data.release_date
-              ? new Date(movieDetails.data.release_date)
-              : null;
-          } catch (error) {
-            console.error(`Error fetching theatrical date for movie ${movie.id}:`, error);
-            // Fallback to discover API date - but note this might be streaming date due to our filter
-            theatricalDate = movie.release_date ? new Date(movie.release_date) : null;
-          }
-
-          const streamingDateMidnight = streamingDate
-            ? toUtcMidnight(streamingDate)
-            : null;
-          const theatricalDateMidnight = theatricalDate
-            ? toUtcMidnight(theatricalDate)
-            : null;
-
-          // For top streaming releases, only include movies with actual streaming dates
-          const hasRecentStreaming = streamingDateMidnight;
-
-          let displayDate = "Available Now";
-          if (streamingDateMidnight) {
-            displayDate = `Released ${
-              streamingDateMidnight.toISOString().split("T")[0]
-            }`;
-          }
-
-          return {
-            ...movie,
-            release_date: theatricalDate ? theatricalDate.toISOString().split('T')[0] : null, // Use proper theatrical date
-            streamingDateRaw,
-            streamingDate: streamingDateMidnight,
-            theatricalDate: theatricalDateMidnight,
-            displayDate,
-            hasRecentStreaming,
-            rating: movie.vote_average || 0,
-            popularity: movie.popularity || 0,
-          };
-        })
-      );
+      // Process movies with dates using the centralized service
+      const processedMovies = await processMoviesWithDates(results, { type: 'releases' });
 
       // Filter for movies with recent streaming releases
-      const validMovies = processedMovies.filter(
-        (movie) => movie.hasRecentStreaming
-      );
+      const validMovies = filterMovies(processedMovies, { type: 'releases' });
       allValidMovies = allValidMovies.concat(validMovies);
       tmdbPage++;
     }
 
-    // Apply sorting to all movies with secondary sort key for consistency
-    switch (sortBy) {
-      case "newest":
-        allValidMovies.sort((a, b) => {
-          if (!a.streamingDate && !b.streamingDate) return a.id - b.id;
-          if (!a.streamingDate) return 1;
-          if (!b.streamingDate) return -1;
-          const dateCompare = b.streamingDate - a.streamingDate;
-          return dateCompare !== 0 ? dateCompare : a.id - b.id;
-        });
-        break;
-      case "oldest":
-        allValidMovies.sort((a, b) => {
-          if (!a.streamingDate && !b.streamingDate) return a.id - b.id;
-          if (!a.streamingDate) return 1;
-          if (!b.streamingDate) return -1;
-          const dateCompare = a.streamingDate - b.streamingDate;
-          return dateCompare !== 0 ? dateCompare : a.id - b.id;
-        });
-        break;
-      case "rating":
-        allValidMovies.sort((a, b) => {
-          const ratingCompare = b.rating - a.rating;
-          return ratingCompare !== 0 ? ratingCompare : a.id - b.id;
-        });
-        break;
-      case "popularity":
-      default:
-        allValidMovies.sort((a, b) => {
-          const popularityCompare = b.popularity - a.popularity;
-          return popularityCompare !== 0 ? popularityCompare : a.id - b.id;
-        });
-        break;
-    }
+    // Apply sorting using the centralized service
+    allValidMovies = sortMovies(allValidMovies, sortBy);
 
     // Take only the initial batch
     const initialMovies = allValidMovies.slice(0, initialLimit);
@@ -183,16 +90,9 @@ router.get("/top-releases", async (req, res) => {
       };
     }
 
-    // Get genres for filter dropdown
-    const genresResponse = await axios.get(
-      `https://api.themoviedb.org/3/genre/movie/list`,
-      {
-        params: {
-          api_key: process.env.TMDB_API_KEY,
-        },
-      }
-    );
-    const genres = genresResponse.data.genres || [];
+    // Get genres for filter dropdown using centralized service
+    const genresResponse = await getGenres();
+    const genres = genresResponse.genres || [];
 
     res.locals.page = "top-releases";
     res.render("top-releases", {
@@ -209,7 +109,6 @@ router.get("/top-releases", async (req, res) => {
         { value: "popularity", label: "Most Popular" },
         { value: "rating", label: "Highest Rated" },
         { value: "newest", label: "Newest First" },
-        { value: "oldest", label: "Oldest First" },
       ],
     });
   } catch (err) {

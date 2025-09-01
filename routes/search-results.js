@@ -1,12 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const axios = require("axios");
-const { getStreamingReleaseDate } = require("../services/tmdb");
 const { getFollowedMoviesByUserId } = require("../services/airtable");
-const { toUtcMidnight } = require("../utils/date-helpers");
+const { processMoviesWithDates, filterMovies } = require("../services/movie-processor");
+const { searchMovies } = require("../services/tmdb");
 const { sortByRelevanceAndPopularity } = require("../utils/search-helpers");
-// Caching
-const { getCachedData, setCachedData } = require("../services/cache");
 router.get("/search", async (req, res) => {
   const query = req.query.query;
   const followMessage = req.query.followMessage || null;
@@ -14,79 +11,17 @@ router.get("/search", async (req, res) => {
   if (!query) return res.redirect("/");
 
   try {
-    // Load only the first page for initial load
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/search/movie`,
-      {
-        params: {
-          api_key: process.env.TMDB_API_KEY,
-          query: query,
-          page: 1, // Always load page 1 initially
-        },
-      }
-    );
-
-    let results = response.data.results;
+    // Load only the first page for initial load using centralized service
+    const response = await searchMovies(query, 1);
+    let results = response.results;
 
     results.sort((a, b) => sortByRelevanceAndPopularity(a, b, query));
 
-    // Grab streaming release dates and pre-calculate date-related info
-    const now = toUtcMidnight(new Date());
-    const movies = await Promise.all(
-      results.map(async (movie) => {
-        const streamingDateRaw = await getStreamingReleaseDate(movie.id);
-        const streamingDate = streamingDateRaw
-          ? new Date(streamingDateRaw)
-          : null;
-        const theatricalDate = movie.release_date
-          ? new Date(movie.release_date)
-          : null;
-
-        const streamingDateMidnight = streamingDate
-          ? toUtcMidnight(streamingDate)
-          : null;
-        const theatricalDateMidnight = theatricalDate
-          ? toUtcMidnight(theatricalDate)
-          : null;
-
-        const now = toUtcMidnight(new Date());
-        const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
-
-        const theatricalInPast60Days =
-          theatricalDateMidnight &&
-          theatricalDateMidnight <= now &&
-          now - theatricalDateMidnight <= SIXTY_DAYS_MS;
-
-        const theatricalInFuture =
-          theatricalDateMidnight && theatricalDateMidnight > now;
-
-        const streamingInFuture =
-          streamingDateMidnight && streamingDateMidnight > now;
-
-        const canFollow =
-          (theatricalInPast60Days &&
-            (!streamingDateMidnight || streamingDateMidnight > now)) ||
-          theatricalInFuture ||
-          (!theatricalDateMidnight && streamingInFuture);
-
-        let displayDate = "Coming Soon";
-        if (streamingDateMidnight) {
-          displayDate = streamingDateMidnight.toISOString().split("T")[0];
-        } else if (theatricalDateMidnight) {
-          displayDate =
-            theatricalDateMidnight.toISOString().split("T")[0] +
-            " (Theatrical)";
-        }
-
-        return {
-          ...movie,
-          streamingDateRaw,
-          canFollow,
-          displayDate,
-          rating: movie.vote_average,
-        };
-      })
-    );
+    // Process movies with dates using the centralized service
+    const processedMovies = await processMoviesWithDates(results, { type: 'search' });
+    
+    // Filter movies that can be followed
+    const movies = filterMovies(processedMovies, { type: 'search' });
 
     let user = null;
     let followedMovieIds = [];
@@ -99,12 +34,8 @@ router.get("/search", async (req, res) => {
         airtableRecordId: req.session.airtableRecordId,
       };
 
-      const cacheKey = `followedMovies_${req.session.userId}`;
-      let followedRecords = getCachedData(cacheKey);
-      if (!followedRecords) {
-        followedRecords = await getFollowedMoviesByUserId(req.session.userId);
-        setCachedData(cacheKey, followedRecords, 600); // cache for 10 mins
-      }
+      // Get followed movies (caching handled by service layer)
+      const followedRecords = await getFollowedMoviesByUserId(req.session.userId);
 
       followedMovieIds = followedRecords.map((record) =>
         Number(record.fields.TMDB_ID)

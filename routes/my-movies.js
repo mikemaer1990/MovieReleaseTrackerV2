@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const { getFollowedMoviesByUserId } = require("../services/airtable");
-const { getCachedData, setCachedData } = require("../services/cache"); // <-- Import cache
 
 router.get("/", async (req, res) => {
   if (!req.session.userId) {
@@ -11,19 +10,8 @@ router.get("/", async (req, res) => {
   try {
     const userId = req.session.userId;
 
-    // 1. Try to get followed movies from cache for this user
-    const cacheKey = `followedMovies_${userId}`;
-
-    // 1. Try to get followed movies from cache for this user
-    let followedMovies = getCachedData(cacheKey);
-
-    // 2. If no cached data, fetch from Airtable and cache it
-    if (!followedMovies) {
-      followedMovies = await getFollowedMoviesByUserId(userId);
-
-      // Cache data for 10 minutes (600 seconds)
-      setCachedData(cacheKey, followedMovies, 600);
-    }
+    // Get followed movies (caching is handled by the service layer)
+    const followedMovies = await getFollowedMoviesByUserId(userId);
 
     // 3. Group movies by TMDB_ID to consolidate duplicates (your existing logic)
     const moviesMap = new Map();

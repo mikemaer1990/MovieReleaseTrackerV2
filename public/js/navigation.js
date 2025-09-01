@@ -21,7 +21,7 @@ class Navigation {
 
   initHamburgerMenu() {
     const hamburger = document.getElementById("hamburgerBtn");
-    const navLinks = document.querySelector(".nav-links");
+    const navLinks = document.querySelector(".mobile-nav-links");
 
     // Exit if elements don't exist
     if (!hamburger || !navLinks) return;
@@ -46,20 +46,92 @@ class Navigation {
   initUserDropdown() {
     const userToggle = document.querySelector(".user-toggle");
     const userDropdown = document.querySelector(".user-dropdown");
+    const userMenu = document.querySelector(".user-menu");
 
     // Exit if elements don't exist (user might not be logged in)
-    if (!userToggle || !userDropdown) return;
+    if (!userToggle || !userDropdown || !userMenu) return;
 
-    userToggle.addEventListener("click", () => {
+    // Toggle dropdown and update ARIA states
+    const toggleDropdown = () => {
+      const isOpen = userDropdown.classList.contains("show");
+      
       userDropdown.classList.toggle("show");
+      userToggle.setAttribute("aria-expanded", !isOpen);
+      userMenu.setAttribute("aria-hidden", isOpen);
+      
+      // Focus management
+      if (!isOpen) {
+        // When opening, focus first menu item
+        const firstMenuItem = userMenu.querySelector('[role="menuitem"]');
+        if (firstMenuItem) {
+          setTimeout(() => firstMenuItem.focus(), 50);
+        }
+      }
+    };
+
+    // Click handler
+    userToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleDropdown();
+    });
+
+    // Keyboard navigation
+    userToggle.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleDropdown();
+      } else if (e.key === "ArrowDown" && !userDropdown.classList.contains("show")) {
+        e.preventDefault();
+        toggleDropdown();
+      }
+    });
+
+    // Menu item keyboard navigation
+    userMenu.addEventListener("keydown", (e) => {
+      const menuItems = userMenu.querySelectorAll('[role="menuitem"]');
+      const currentIndex = Array.from(menuItems).indexOf(document.activeElement);
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const nextIndex = (currentIndex + 1) % menuItems.length;
+        menuItems[nextIndex].focus();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const prevIndex = (currentIndex - 1 + menuItems.length) % menuItems.length;
+        menuItems[prevIndex].focus();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        this.closeUserDropdown();
+        userToggle.focus();
+      }
     });
 
     // Close dropdown if clicked outside
     document.addEventListener("click", (e) => {
       if (!userDropdown.contains(e.target)) {
-        userDropdown.classList.remove("show");
+        this.closeUserDropdown();
       }
     });
+
+    // Close on Escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && userDropdown.classList.contains("show")) {
+        this.closeUserDropdown();
+        userToggle.focus();
+      }
+    });
+  }
+
+  closeUserDropdown() {
+    const userDropdown = document.querySelector(".user-dropdown");
+    const userToggle = document.querySelector(".user-toggle");
+    const userMenu = document.querySelector(".user-menu");
+    
+    if (userDropdown && userToggle && userMenu) {
+      userDropdown.classList.remove("show");
+      userToggle.setAttribute("aria-expanded", "false");
+      userMenu.setAttribute("aria-hidden", "true");
+    }
   }
 
   initSearch() {

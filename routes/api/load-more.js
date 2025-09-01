@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const axios = require("axios");
+const { discoverMovies, searchMovies, getUpcomingMovies } = require("../../services/tmdb");
 const { toUtcMidnight } = require("../../utils/date-helpers");
 const { processMoviesWithDates, filterMovies, sortMovies, deduplicateMovies } = require("../../services/movie-processor");
 const { renderMovieCards, createLoadMoreResponse, createErrorResponse } = require("../../utils/template-renderer");
@@ -27,9 +27,6 @@ router.get("/load-more-releases", async (req, res) => {
       case "newest":
         tmdbSortBy = "release_date.desc";
         break;
-      case "oldest":
-        tmdbSortBy = "release_date.asc";
-        break;
       case "popularity":
       default:
         tmdbSortBy = "popularity.desc";
@@ -41,25 +38,19 @@ router.get("/load-more-releases", async (req, res) => {
     // Load more page 2 should start from TMDB page (initialPagesUsed + 1)
     const tmdbPage = initialPagesUsed + (page - 1);
 
-    // Fetch the next page directly from TMDB
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/discover/movie`,
-      {
-        params: {
-          api_key: process.env.TMDB_API_KEY,
-          page: tmdbPage,
-          region: "US",
-          sort_by: tmdbSortBy,
-          "primary_release_date.gte": sixMonthsAgo.toISOString().split('T')[0],
-          "primary_release_date.lte": now.toISOString().split('T')[0],
-          with_release_type: "4|5", // Digital and Physical releases
-          ...(genre && { with_genres: genre })
-        },
-      }
-    );
+    // Fetch the next page directly from TMDB using centralized service
+    const response = await discoverMovies({
+      page: tmdbPage,
+      region: "US",
+      sort_by: tmdbSortBy,
+      "primary_release_date.gte": sixMonthsAgo.toISOString().split('T')[0],
+      "primary_release_date.lte": now.toISOString().split('T')[0],
+      with_release_type: "4|5", // Digital and Physical releases
+      ...(genre && { with_genres: genre })
+    });
 
     // Process movies using shared utility
-    const processedMovies = await processMoviesWithDates(response.data.results, { type: 'releases' });
+    const processedMovies = await processMoviesWithDates(response.results, { type: 'releases' });
     
     // Filter movies using shared utility
     const validMovies = filterMovies(processedMovies, { type: 'releases', genre });
@@ -68,7 +59,7 @@ router.get("/load-more-releases", async (req, res) => {
     const sortedMovies = sortBy !== "popularity" ? sortMovies(validMovies, sortBy) : validMovies;
 
     // Determine if there are more pages available
-    const hasMore = tmdbPage < response.data.total_pages;
+    const hasMore = tmdbPage < response.total_pages;
 
     // Get user's followed movies for proper follow button rendering
     let followedMovieIds = [];
@@ -116,21 +107,12 @@ router.get("/load-more-search", async (req, res) => {
       return res.status(400).json(errorResponse);
     }
 
-    const response = await axios.get(
-      `https://api.themoviedb.org/3/search/movie`,
-      {
-        params: {
-          api_key: process.env.TMDB_API_KEY,
-          query: query,
-          page: page,
-        },
-      }
-    );
+    const response = await searchMovies(query, page);
 
     // Process movies using shared utility
-    const processedMovies = await processMoviesWithDates(response.data.results, { type: 'search' });
+    const processedMovies = await processMoviesWithDates(response.results, { type: 'search' });
 
-    const hasMore = page < response.data.total_pages;
+    const hasMore = page < response.total_pages;
 
     // Get user's followed movies for proper follow button rendering
     let followedMovieIds = [];
@@ -174,6 +156,11 @@ router.get("/load-more-upcoming", async (req, res) => {
     const page = parseInt(req.query.page) || 2;
     const initialPagesUsed = parseInt(req.query.initialPagesUsed) || 3;
     const moviesPerPage = 20;
+    
+    // Parse displayed movie IDs to prevent duplicates across pagination
+    const displayedMovieIds = req.query.displayedMovieIds 
+      ? req.query.displayedMovieIds.split(',').map(id => parseInt(id))
+      : [];
 
     let collectedMovies = [];
     let tmdbPage = initialPagesUsed + (page - 1); // Simple sequential pagination after initial load
@@ -184,25 +171,19 @@ router.get("/load-more-upcoming", async (req, res) => {
       collectedMovies.length < moviesPerPage &&
       tmdbPage <= totalTmdbPages // Continue until we have enough movies or reach the real end
     ) {
-      const response = await axios.get(
-        `https://api.themoviedb.org/3/movie/upcoming`,
-        {
-          params: {
-            api_key: process.env.TMDB_API_KEY,
-            page: tmdbPage,
-            region: "US",
-          },
-        }
-      );
+      const response = await getUpcomingMovies(tmdbPage, "US");
 
-      totalTmdbPages = response.data.total_pages;
+      totalTmdbPages = response.total_pages;
 
       // Process movies using shared utility
-      const processedMovies = await processMoviesWithDates(response.data.results, { type: 'upcoming' });
+      const processedMovies = await processMoviesWithDates(response.results, { type: 'upcoming' });
       
       // Filter and deduplicate using shared utilities
       const filteredMovies = filterMovies(processedMovies, { type: 'upcoming' });
-      const newMovies = deduplicateMovies(filteredMovies, collectedMovies);
+      // First deduplicate against already collected movies in this request
+      const deduplicatedFromCollection = deduplicateMovies(filteredMovies, collectedMovies);
+      // Then deduplicate against previously displayed movies across all pages
+      const newMovies = deduplicatedFromCollection.filter(movie => !displayedMovieIds.includes(movie.id));
 
       collectedMovies.push(...newMovies);
       tmdbPage++;

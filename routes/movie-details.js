@@ -1,25 +1,12 @@
 // routes/movie-details.js
 const express = require("express");
 const router = express.Router();
-const axios = require("axios");
-const { getStreamingReleaseDate } = require("../services/tmdb");
+const { getStreamingReleaseDate, getMovieDetails } = require("../services/tmdb");
 const { getFollowedMoviesByUserId } = require("../services/airtable");
 // Caching
 const { getCachedData, setCachedData } = require("../services/cache");
 // Constants
-const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const CAST_LIMIT = 10;
-
-// Helper function to get movie from TMDB
-async function getMovieFromTMDB(movieId, appendToResponse = "") {
-  const response = await axios.get(`${TMDB_BASE_URL}/movie/${movieId}`, {
-    params: {
-      api_key: process.env.TMDB_API_KEY,
-      ...(appendToResponse && { append_to_response: appendToResponse }),
-    },
-  });
-  return response.data;
-}
 
 // Helper function to find trailer
 function findTrailer(videos) {
@@ -86,8 +73,8 @@ router.get("/:id", async (req, res) => {
   try {
     const movieId = req.params.id;
 
-    // Get detailed movie information from TMDB
-    const movie = await getMovieFromTMDB(movieId, "credits,videos");
+    // Get detailed movie information from TMDB using centralized service
+    const movie = await getMovieDetails(movieId, "credits,videos");
 
     // Get streaming release date
     const streamingDate = await getStreamingReleaseDate(movieId);

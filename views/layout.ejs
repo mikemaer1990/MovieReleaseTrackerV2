@@ -19,7 +19,22 @@
         <a href="/"><img src="/images/logo.png" alt="Logo" class="logo" /></a>
       </div>
 
+      <div class="nav-center">
+        <div class="nav-links">
+          <a href="/" class="<%= page === 'home' ? 'active' : '' %>">Home</a>
+          <a href="/upcoming" class="<%= page === 'upcoming' ? 'active' : '' %>"
+            >Upcoming</a
+          >
+          <a
+            href="/top-releases"
+            class="<%= page === 'top-releases' ? 'active' : '' %>"
+            >Top Releases</a
+          >
+        </div>
+      </div>
+
       <div class="nav-right">
+        <% if (page !== 'home') { %>
         <form class="nav-search" action="/search" method="GET" role="search">
           <label for="nav-search-input" class="sr-only">Search for movies</label>
           <input 
@@ -40,29 +55,28 @@
             <span class="search-icon" aria-hidden="true">🔍</span>
           </button>
         </form>
+        <% } %>
 
-        <div class="nav-links">
-          <a href="/" class="<%= page === 'home' ? 'active' : '' %>">Home</a>
-          <a href="/upcoming" class="<%= page === 'upcoming' ? 'active' : '' %>"
-            >Upcoming</a
-          >
-          <a
-            href="/top-releases"
-            class="<%= page === 'top-releases' ? 'active' : '' %>"
-            >Top Releases</a
-          >
+        <div class="nav-user">
           <% if (isLoggedIn) { %>
           <div class="user-dropdown nav-user-dropdown">
-            <button class="user-toggle">
-              <% if (user) { %> <%= user.name || user.email %>
-              <span class="arrow">▼</span>
+            <button 
+              class="user-toggle" 
+              aria-expanded="false" 
+              aria-haspopup="true"
+              aria-label="User menu for <%= user ? (user.name || user.email) : 'user' %>"
+              id="user-menu-button"
+            >
+              <% if (user) { %> 
+                <span class="username"><%= user.name || user.email %></span>
+                <span class="arrow" aria-hidden="true"></span>
               <% } %>
             </button>
-            <div class="user-menu">
-              <a href="/my-movies">My Movies</a>
-              <a href="/profile">Profile</a>
-              <a href="/settings">Settings</a>
-              <a href="/auth/logout">Logout</a>
+            <div class="user-menu" role="menu" aria-labelledby="user-menu-button" aria-hidden="true">
+              <a href="/my-movies" role="menuitem">My Movies</a>
+              <a href="/profile" role="menuitem">Profile</a>
+              <a href="/settings" role="menuitem">Settings</a>
+              <a href="/auth/logout" role="menuitem">Logout</a>
             </div>
           </div>
           <% } else { %>
@@ -71,6 +85,34 @@
         </div>
 
         <button class="hamburger" id="hamburgerBtn">☰</button>
+        
+        <!-- Mobile Navigation Menu -->
+        <div class="mobile-nav-links nav-links">
+          <!-- User Section (at top) -->
+          <% if (isLoggedIn) { %>
+          <div class="mobile-nav-section mobile-user-section">
+            <div class="mobile-section-label">Account</div>
+            <a href="/my-movies">My Movies</a>
+            <a href="/profile">Profile</a>
+            <a href="/settings">Settings</a>
+            <a href="/auth/logout" class="logout-link">Logout</a>
+          </div>
+          <% } %>
+
+          <!-- Navigation Section -->
+          <div class="mobile-nav-section">
+            <div class="mobile-section-label">Navigate</div>
+            <a href="/" class="<%= page === 'home' ? 'active' : '' %>">Home</a>
+            <a href="/upcoming" class="<%= page === 'upcoming' ? 'active' : '' %>">Upcoming</a>
+            <a href="/top-releases" class="<%= page === 'top-releases' ? 'active' : '' %>">Top Releases</a>
+          </div>
+
+          <% if (!isLoggedIn) { %>
+          <div class="mobile-nav-section">
+            <a href="/auth/login">Login</a>
+          </div>
+          <% } %>
+        </div>
       </div>
     </nav>
 

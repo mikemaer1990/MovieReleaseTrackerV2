@@ -4,6 +4,7 @@ const airtableAxios = require("../services/airtable").airtableAxios;
 const getStreamingReleaseDate =
   require("../services/tmdb").getStreamingReleaseDate;
 const sendEmail = require("../services/send-email");
+const { generateStreamingDateEmailHTML } = require("../services/email-templates");
 
 const AIRTABLE_FOLLOWED_MOVIES_TABLE =
   process.env.AIRTABLE_FOLLOWED_MOVIES_TABLE;
@@ -16,6 +17,8 @@ router.get("/", async (req, res) => {
   }
 
   try {
+    console.log('[STREAMING-CHECK] Starting streaming dates check...');
+    
     // 1. Fetch all followed movies missing streaming dates but should have them
     const filterFormula = `AND(
       OR(
@@ -26,41 +29,65 @@ router.get("/", async (req, res) => {
     )`;
 
     const response = await airtableAxios.get(AIRTABLE_FOLLOWED_MOVIES_TABLE, {
-      params: { filterByFormula: filterFormula },
+      params: { 
+        filterByFormula: filterFormula,
+        maxRecords: 100 // Limit batch size for performance
+      },
     });
 
     const moviesToCheck = response.data.records;
+    
+    console.log(`[STREAMING-CHECK] Found ${moviesToCheck.length} movies to check`);
 
     if (moviesToCheck.length === 0) {
-      console.log("No movies need streaming date updates.");
-      return res.send("No updates needed");
+      console.log('[STREAMING-CHECK] No movies need streaming date updates.');
+      return res.json({ 
+        success: true, 
+        message: 'No updates needed', 
+        processed: 0,
+        updated: 0 
+      });
     }
 
-    // Fetch user emails for notifications
+    // Fetch user emails for notifications (with error handling)
     const userIds = [
       ...new Set(moviesToCheck.flatMap((m) => m.fields.User || [])),
     ];
-    const userResponses = await Promise.all(
+    
+    console.log(`[STREAMING-CHECK] Fetching emails for ${userIds.length} unique users`);
+    
+    const userIdToEmail = {};
+    await Promise.allSettled(
       userIds.map(async (userId) => {
-        const userRes = await airtableAxios.get(
-          `${AIRTABLE_USERS_TABLE}/${userId}`
-        );
-        return { id: userId, email: userRes.data.fields.Email };
+        try {
+          const userRes = await airtableAxios.get(
+            `${AIRTABLE_USERS_TABLE}/${userId}`
+          );
+          userIdToEmail[userId] = userRes.data.fields.Email;
+        } catch (err) {
+          console.error(`[STREAMING-CHECK] Failed to fetch user ${userId}:`, err.message);
+        }
       })
     );
-    const userIdToEmail = Object.fromEntries(
-      userResponses.map((u) => [u.id, u.email])
-    );
 
-    // 2. For each movie, check streaming date from TMDB and update Airtable if found
+    // 2. Process movies in batches with rate limiting
     const updates = [];
+    const emailsSent = [];
+    let processedCount = 0;
+    
+    console.log('[STREAMING-CHECK] Processing movies...');
 
     for (const movie of moviesToCheck) {
       try {
         const tmdbId = movie.fields.TMDB_ID;
+        console.log(`[STREAMING-CHECK] Checking TMDB ID ${tmdbId} for "${movie.fields.Title}"`);
+        
         const streamingDateRaw = await getStreamingReleaseDate(tmdbId);
+        processedCount++;
 
         if (streamingDateRaw) {
+          console.log(`[STREAMING-CHECK] Found streaming date for "${movie.fields.Title}": ${streamingDateRaw}`);
+          
           // Update Airtable with streaming date and flag
           updates.push(
             airtableAxios.patch(
@@ -78,58 +105,84 @@ router.get("/", async (req, res) => {
           const userId = movie.fields.User?.[0];
           const userEmail = userIdToEmail[userId];
           if (userEmail) {
-            const subject = `📺 Streaming release date available for "${movie.fields.Title}"!`;
-            const displayDate = new Date(streamingDateRaw)
-              .toISOString()
-              .split("T")[0];
-            const htmlContent = `
-              <div style="font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 480px; margin: 0 auto; background: #fff; color: #333; padding: 24px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); text-align: center;">
-                <h1 style="font-size: 1.5rem; color: #0078d4; margin-bottom: 0.5rem;">📺 Streaming Release Date Added!</h1>
-                <p style="font-size: 1rem; margin-bottom: 1rem;">
-                  The movie <strong>${
-                    movie.fields.Title
-                  }</strong> now has a confirmed streaming release date: <strong>${displayDate}</strong>.
-                </p>
-                <p style="font-size: 1rem; margin-bottom: 1rem;">
-                  We'll notify you again when it is actually released.
-                </p>
-                ${
-                  movie.fields.PosterPath
-                    ? `<img src="https://image.tmdb.org/t/p/w500${movie.fields.PosterPath}" alt="${movie.fields.Title}" style="width: 100%; max-width: 320px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1rem;" />`
-                    : ""
-                }
-                <p style="font-size: 0.9rem; color: #666; margin-top: 1rem;">
-                  You’re receiving this email because you followed <strong>${
-                    movie.fields.Title
-                  }</strong> on Movie Tracker.
-                </p>
-              </div>
-            `;
+            const subject = `📺 Streaming date added for "${movie.fields.Title}"`;
+            // Parse date carefully to avoid timezone issues
+            const [year, month, day] = streamingDateRaw.split('-');
+            const displayDate = new Date(year, month - 1, day)
+              .toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              });
+            const htmlContent = generateStreamingDateEmailHTML({
+              title: movie.fields.Title,
+              posterPath: movie.fields.PosterPath,
+              streamingDate: displayDate,
+              tmdbId: movie.fields.TMDB_ID
+            });
 
             // Fire and forget email - we don't want to fail entire job for one email error
-            sendEmail({ to: userEmail, subject, htmlContent }).catch((err) => {
-              console.error(
-                `Failed to send streaming date email to ${userEmail}:`,
-                err.message
-              );
-            });
+            sendEmail({ to: userEmail, subject, htmlContent })
+              .then(() => {
+                console.log(`[STREAMING-CHECK] Email sent to ${userEmail} for "${movie.fields.Title}"`);
+                emailsSent.push(movie.fields.Title);
+              })
+              .catch((err) => {
+                console.error(
+                  `[STREAMING-CHECK] Failed to send streaming date email to ${userEmail}:`,
+                  err.message
+                );
+              });
           }
+        } else {
+          console.log(`[STREAMING-CHECK] No streaming date found for "${movie.fields.Title}"`);
         }
+        
+        // Add small delay to avoid rate limiting
+        if (processedCount % 10 === 0) {
+          console.log(`[STREAMING-CHECK] Processed ${processedCount}/${moviesToCheck.length} movies`);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay every 10 requests
+        }
+        
       } catch (err) {
         console.error(
-          `Error checking streaming date for TMDB ID ${movie.fields.TMDB_ID}:`,
+          `[STREAMING-CHECK] Error checking streaming date for TMDB ID ${movie.fields.TMDB_ID} ("${movie.fields.Title}"):`,
           err.message
         );
       }
     }
 
-    // Wait for all Airtable updates
-    await Promise.all(updates);
+    // Wait for all Airtable updates with error handling
+    console.log(`[STREAMING-CHECK] Updating ${updates.length} records in Airtable...`);
+    
+    const updateResults = await Promise.allSettled(updates);
+    const successfulUpdates = updateResults.filter(result => result.status === 'fulfilled').length;
+    const failedUpdates = updateResults.filter(result => result.status === 'rejected');
+    
+    if (failedUpdates.length > 0) {
+      console.error(`[STREAMING-CHECK] ${failedUpdates.length} Airtable updates failed:`);
+      failedUpdates.forEach(result => console.error(result.reason?.message || result.reason));
+    }
+    
+    console.log(`[STREAMING-CHECK] Completed! Processed: ${processedCount}, Updated: ${successfulUpdates}, Emails: ${emailsSent.length}`);
 
-    res.send(`Updated streaming dates for ${updates.length} movies.`);
+    res.json({
+      success: true,
+      message: `Streaming dates check completed`,
+      processed: processedCount,
+      updated: successfulUpdates,
+      failed: failedUpdates.length,
+      emailsSent: emailsSent.length,
+      moviesWithNewDates: emailsSent
+    });
   } catch (err) {
-    console.error("Streaming dates check error:", err);
-    res.status(500).send("Internal server error");
+    console.error('[STREAMING-CHECK] Fatal error:', err.message);
+    console.error(err.stack);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: err.message
+    });
   }
 });
 

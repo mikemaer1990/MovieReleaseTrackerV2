@@ -27,7 +27,7 @@ jobs:
           
           # Try main script
           response=$(curl -s -w "%{http_code}|%{time_total}" -o /tmp/response.txt \
-            "https://moviereleasetrackerv2.onrender.com/check-releases?key=jumbletree" || echo "000|0")
+            "https://moviereleasetrackerv2.onrender.com/jobs/check-releases?key=jumbletree" || echo "000|0")
           
           http_code=$(echo $response | cut -d'|' -f1)
           time_total=$(echo $response | cut -d'|' -f2)
@@ -46,7 +46,7 @@ jobs:
             
             # Retry
             retry_response=$(curl -s -w "%{http_code}" -o /tmp/retry_response.txt \
-              "https://moviereleasetrackerv2.onrender.com/check-releases?key=jumbletree" || echo "000")
+              "https://moviereleasetrackerv2.onrender.com/jobs/check-releases?key=jumbletree" || echo "000")
             
             echo "retry_code=$retry_response" >> $GITHUB_OUTPUT
             

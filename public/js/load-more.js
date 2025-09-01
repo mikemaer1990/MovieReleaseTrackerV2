@@ -16,6 +16,7 @@ class LoadMoreManager {
     this.currentPage = this.config.initialPage;
     this.isLoading = false;
     this.hasMore = true;
+    this.displayedMovieIds = new Set(); // Track displayed movie IDs to prevent duplicates
     
     this.init();
   }
@@ -29,6 +30,9 @@ class LoadMoreManager {
       return;
     }
 
+    // Track initially displayed movie IDs
+    this.collectDisplayedMovieIds();
+
     this.loadMoreBtn.addEventListener('click', () => this.loadMore());
   }
 
@@ -40,6 +44,7 @@ class LoadMoreManager {
     try {
       const params = new URLSearchParams({
         page: this.currentPage,
+        displayedMovieIds: Array.from(this.displayedMovieIds).join(','),
         ...this.config.params
       });
       
@@ -52,6 +57,8 @@ class LoadMoreManager {
 
       if (data.html && data.movies && data.movies.length > 0) {
         this.appendMoviesHTML(data.html);
+        // Track newly displayed movie IDs
+        data.movies.forEach(movie => this.displayedMovieIds.add(movie.id));
         this.currentPage += 1;
         this.updateMovieCount(data.totalLoaded || (this.currentPage - 1) * 20);
       }
@@ -139,6 +146,19 @@ class LoadMoreManager {
     setTimeout(() => {
       loadText.textContent = 'Load More Movies';
     }, 3000);
+  }
+
+  /**
+   * Collects movie IDs from currently displayed movie cards
+   */
+  collectDisplayedMovieIds() {
+    const movieLinks = this.moviesGrid.querySelectorAll('.movie-card a[href^="/movie/"]');
+    movieLinks.forEach(link => {
+      const movieId = link.href.match(/\/movie\/(\d+)/)?.[1];
+      if (movieId) {
+        this.displayedMovieIds.add(parseInt(movieId));
+      }
+    });
   }
 }
 

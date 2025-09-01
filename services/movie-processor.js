@@ -1,6 +1,5 @@
-const { getStreamingReleaseDate } = require("./tmdb");
+const { getStreamingReleaseDate, getMovieDetails } = require("./tmdb");
 const { toUtcMidnight } = require("../utils/date-helpers");
-const axios = require("axios");
 
 /**
  * Movie Processing Service
@@ -26,12 +25,9 @@ async function processMovieWithDates(movie, options = {}) {
   let theatricalDate = null;
   if (options.type === 'releases') {
     try {
-      const movieDetails = await axios.get(
-        `https://api.themoviedb.org/3/movie/${movie.id}`,
-        { params: { api_key: process.env.TMDB_API_KEY } }
-      );
-      theatricalDate = movieDetails.data.release_date
-        ? new Date(movieDetails.data.release_date)
+      const movieDetails = await getMovieDetails(movie.id);
+      theatricalDate = movieDetails.release_date
+        ? new Date(movieDetails.release_date)
         : null;
     } catch (error) {
       console.error(`Error fetching theatrical date for movie ${movie.id}:`, error);
@@ -146,7 +142,7 @@ function filterMovies(movies, filterOptions = {}) {
 /**
  * Apply sorting to processed movies
  * @param {Array} movies - Array of processed movies
- * @param {string} sortBy - Sort criteria ('popularity', 'rating', 'newest', 'oldest')
+ * @param {string} sortBy - Sort criteria ('popularity', 'rating', 'newest')
  * @returns {Array} Sorted movies
  */
 function sortMovies(movies, sortBy = 'popularity') {
@@ -159,15 +155,6 @@ function sortMovies(movies, sortBy = 'popularity') {
         if (!a.streamingDate) return 1;
         if (!b.streamingDate) return -1;
         const dateCompare = b.streamingDate - a.streamingDate;
-        return dateCompare !== 0 ? dateCompare : a.id - b.id;
-      });
-
-    case "oldest":
-      return moviesCopy.sort((a, b) => {
-        if (!a.streamingDate && !b.streamingDate) return a.id - b.id;
-        if (!a.streamingDate) return 1;
-        if (!b.streamingDate) return -1;
-        const dateCompare = a.streamingDate - b.streamingDate;
         return dateCompare !== 0 ? dateCompare : a.id - b.id;
       });
 

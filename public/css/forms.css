@@ -483,6 +483,16 @@
   scrollbar-color: rgba(243, 217, 107, 0.3) rgba(0, 0, 0, 0.1);
 }
 
+/* Hide scrollbar for sort dropdown (only has 3 items) */
+#sort-menu::-webkit-scrollbar {
+  display: none;
+}
+
+#sort-menu {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 
 /* Responsive Forms */
 @media (min-width: 498px) and (max-width: 600px) {
