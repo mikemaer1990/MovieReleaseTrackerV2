@@ -27,24 +27,42 @@ This is a Node.js/Express.js movie release tracking web application with the fol
 ### Directory Structure
 
 ```
-├── app.js                 # Main Express application entry point
-├── routes/               # Express route handlers
-│   ├── index.js         # Home page
-│   ├── auth.js          # Login/register/logout
-│   ├── api.js           # Follow/unfollow API endpoints
-│   ├── search-results.js # Movie search functionality
-│   ├── upcoming.js      # Upcoming movie releases
-│   ├── my-movies.js     # User's followed movies
-│   └── movie-details.js # Individual movie pages
-├── services/            # Business logic layer
-│   ├── airtable.js      # Airtable database operations
-│   ├── tmdb.js          # TMDB API integration
-│   └── cache.js         # NodeCache wrapper
-├── views/               # EJS templates
-│   ├── layout.ejs       # Main layout template
-│   └── partials/        # Reusable view components
-└── public/              # Static assets (CSS, JS, images)
-    └── js/              # Client-side JavaScript
+├── app.js                      # Main Express application entry point
+├── routes/                     # Express route handlers
+│   ├── index.js               # Home page
+│   ├── auth.js                # Login/register/logout
+│   ├── api.js                 # Legacy API endpoints
+│   ├── api/                   # Modern API endpoints
+│   │   ├── follow.js         # Follow/unfollow API endpoints
+│   │   └── load-more.js      # AJAX load-more endpoints
+│   ├── search-results.js      # Movie search functionality
+│   ├── upcoming.js            # Upcoming movie releases
+│   ├── top-releases.js        # Top streaming releases
+│   ├── my-movies.js           # User's followed movies
+│   ├── movie-details.js       # Individual movie pages
+│   ├── check-releases.js      # Release date checking cron
+│   └── check-streaming-dates.js # Streaming date checking cron
+├── services/                   # Business logic layer
+│   ├── airtable.js            # Airtable database operations
+│   ├── tmdb.js                # TMDB API integration
+│   ├── cache.js               # NodeCache wrapper
+│   ├── movie-processor.js     # Movie data processing and filtering
+│   ├── send-email.js          # Email notification service
+│   └── email-templates.js     # Email template generation
+├── utils/                      # Utility functions
+│   ├── date-helpers.js        # Date manipulation utilities
+│   ├── search-helpers.js      # Search relevance and sorting
+│   └── template-renderer.js   # EJS template rendering for APIs
+├── views/                      # EJS templates
+│   ├── layout.ejs             # Main layout template
+│   └── partials/              # Reusable view components
+└── public/                     # Static assets (CSS, JS, images)
+    ├── css/                   # Stylesheets
+    ├── js/                    # Client-side JavaScript
+    │   ├── follow.js          # Follow/unfollow interactions
+    │   ├── load-more.js       # AJAX pagination
+    │   └── navigation.js      # Navigation utilities
+    └── images/                # Static images
 ```
 
 ## Key Services
@@ -60,14 +78,34 @@ This is a Node.js/Express.js movie release tracking web application with the fol
 
 ### TMDB Service (`services/tmdb.js`)
 
-- **Purpose**: Fetches streaming release dates from The Movie Database API
-- **Key Function**: `getStreamingReleaseDate()` - Gets digital/physical release dates
+- **Purpose**: Fetches movie data from The Movie Database API
+- **Key Functions**:
+  - `searchMovies()` - Search for movies by query
+  - `discoverMovies()` - Discover movies with filters
+  - `getUpcomingMovies()` - Get upcoming movie releases
+  - `getStreamingReleaseDate()` - Gets digital/physical release dates
+  - `getMovieDetails()` - Fetch detailed movie information
+
+### Movie Processor Service (`services/movie-processor.js`)
+
+- **Purpose**: Centralized movie data processing and filtering
+- **Key Functions**:
+  - `processMoviesWithDates()` - Process TMDB movies with date calculations
+  - `filterMovies()` - Filter movies based on type and criteria
+  - `sortMovies()` - Sort movies by popularity, rating, or release date
+  - `deduplicateMovies()` - Remove duplicate movies from arrays
 
 ### Cache Service (`services/cache.js`)
 
 - **Implementation**: NodeCache with 10-minute default TTL
 - **Usage**: Primarily used to cache Airtable API responses for performance
 - **Pattern**: Cache-aside with explicit cache invalidation on data mutations
+
+### Email Service (`services/send-email.js`)
+
+- **Purpose**: Handles email notifications using Brevo API
+- **Integration**: Works with `email-templates.js` for HTML email generation
+- **Usage**: Sends release date notifications to users
 
 ## Authentication & Session Management
 
@@ -91,18 +129,34 @@ The system automatically fetches streaming dates from TMDB when following stream
 - **Template Engine**: EJS with express-ejs-layouts
 - **Client-side JS**: Vanilla JavaScript in `/public/js/`
 - **Key Frontend Files**:
-  - `follow.js` - Handles follow/unfollow interactions
-  - `movie-cards.js` - Movie card functionality
-  - `pagination.js` - Pagination controls
+  - `follow.js` - Handles follow/unfollow interactions with comprehensive error handling
+  - `load-more.js` - Generic AJAX pagination system for all pages
+  - `navigation.js` - Navigation utilities and search functionality
+- **AJAX Load-More System**: Unified pagination system supporting:
+  - Top Releases (`/load-more-releases`)
+  - Search Results (`/load-more-search`) 
+  - Upcoming Movies (`/load-more-upcoming`)
+- **Follow System**: Event-delegated follow/unfollow with optimistic UI updates
 
 ## Environment Variables Required
 
 ```
-SESSION_SECRET=your-session-secret
-AIRTABLE_API_KEY=your-airtable-pat
-AIRTABLE_BASE_ID=your-base-id
-TMDB_API_KEY=your-tmdb-api-key
-PORT=3000 (optional)
+# Server Configuration
+PORT=3000                                    # Server port (optional)
+SESSION_SECRET=your-session-secret           # Session encryption secret
+
+# Database Configuration
+AIRTABLE_API_KEY=your-airtable-pat          # Airtable Personal Access Token
+AIRTABLE_BASE_ID=your-base-id               # Airtable Base ID
+AIRTABLE_USERS_TABLE=Users                  # Users table name
+AIRTABLE_FOLLOWED_MOVIES_TABLE=FollowedMovies # FollowedMovies table name
+
+# External APIs
+TMDB_API_KEY=your-tmdb-api-key              # The Movie Database API key
+BREVO_API_KEY=your-brevo-api-key            # Brevo (formerly Sendinblue) API key for emails
+
+# Cron Job Security
+CRON_SECRET=your-cron-secret                # Secret for cron job endpoints
 ```
 
 ## Database Schema (Airtable)
@@ -131,6 +185,39 @@ PORT=3000 (optional)
 - **TTL**: 600 seconds (10 minutes)
 - **Invalidation**: Explicit cache clearing on follow/unfollow operations
 - **Location**: All caching logic centralized in `services/cache.js`
+
+## API Endpoints Reference
+
+### Page Routes
+- `GET /` - Home page with search functionality
+- `GET /upcoming` - Upcoming movie releases page
+- `GET /top-releases` - Top streaming releases page  
+- `GET /search` - Movie search results page
+- `GET /my-movies` - User's followed movies page
+- `GET /movie/:id` - Individual movie details page
+
+### Authentication Routes (`routes/auth.js`)
+- `GET /auth/login` - Login page
+- `POST /auth/login` - Process login
+- `GET /auth/register` - Registration page
+- `POST /auth/register` - Process registration
+- `POST /auth/logout` - Logout user
+
+### API Routes (`routes/api/`)
+- `POST /follow` - Follow a movie (`routes/api/follow.js`)
+- `POST /unfollow` - Unfollow a movie (`routes/api/follow.js`)
+
+### AJAX Load-More Routes (`routes/api/load-more.js`)
+- `GET /load-more-releases?page=N&sort=popularity&genre=` - Load more top releases
+- `GET /load-more-search?page=N&query=term` - Load more search results  
+- `GET /load-more-upcoming?page=N` - Load more upcoming movies
+
+### Cron Job Routes (Protected by CRON_SECRET)
+- `POST /check-releases` - Check for new release dates (`routes/check-releases.js`)
+- `POST /check-streaming-dates` - Check for streaming dates (`routes/check-streaming-dates.js`)
+
+### Legacy API Routes (`routes/api.js`)
+- Various legacy endpoints (being phased out in favor of `routes/api/` structure)
 
 ## Visual Development & Testing
 
