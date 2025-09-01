@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const { getStreamingReleaseDate, getMovieDetails } = require("../services/tmdb");
 const { getFollowedMoviesByUserId } = require("../services/airtable");
+const { getMovieDisplayDate } = require("../utils/date-helpers");
 // Caching
 const { getCachedData, setCachedData } = require("../services/cache");
 // Constants
@@ -79,6 +80,15 @@ router.get("/:id", async (req, res) => {
     // Get streaming release date
     const streamingDate = await getStreamingReleaseDate(movieId);
     movie.streaming_date = streamingDate;
+    movie.streamingDateRaw = streamingDate;
+
+    // Add unified date display information
+    const dateInfo = getMovieDisplayDate(movie, { context: 'details' });
+    movie.displayDate = dateInfo.displayText;
+    movie.dateType = dateInfo.dateType;
+    movie.dateStatusClass = dateInfo.statusClass;
+    movie.theatricalFormatted = dateInfo.theatricalFormatted;
+    movie.streamingFormatted = dateInfo.streamingFormatted;
 
     // Process cast and crew
     const cast = movie.credits?.cast?.slice(0, CAST_LIMIT) || [];

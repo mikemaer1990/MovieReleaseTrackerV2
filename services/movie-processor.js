@@ -1,5 +1,5 @@
 const { getStreamingReleaseDate, getMovieDetails } = require("./tmdb");
-const { toUtcMidnight } = require("../utils/date-helpers");
+const { toUtcMidnight, getMovieDisplayDate, canFollowMovie } = require("../utils/date-helpers");
 
 /**
  * Movie Processing Service
@@ -52,48 +52,22 @@ async function processMovieWithDates(movie, options = {}) {
     popularity: movie.popularity || 0,
   };
 
-  // Add context-specific properties based on options
+  // Use unified date handling for all contexts
+  const dateInfo = getMovieDisplayDate(processedMovie, { context: options.type || 'general' });
+  
+  // Add unified date display properties
+  processedMovie.displayDate = dateInfo.displayText;
+  processedMovie.dateType = dateInfo.dateType;
+  processedMovie.dateStatusClass = dateInfo.statusClass;
+  processedMovie.theatricalFormatted = dateInfo.theatricalFormatted;
+  processedMovie.streamingFormatted = dateInfo.streamingFormatted;
+  
+  // Add unified follow logic
+  processedMovie.canFollow = canFollowMovie(processedMovie, { context: options.type || 'general' });
+
+  // Add context-specific properties for backward compatibility
   if (options.type === 'releases') {
     processedMovie.hasRecentStreaming = streamingDateMidnight || theatricalDateMidnight;
-    processedMovie.displayDate = streamingDateMidnight 
-      ? `Released ${streamingDateMidnight.toISOString().split("T")[0]}`
-      : "Available Now";
-  }
-
-  if (options.type === 'search') {
-    const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
-    const theatricalInPast60Days = theatricalDateMidnight &&
-      theatricalDateMidnight <= now &&
-      now - theatricalDateMidnight <= SIXTY_DAYS_MS;
-
-    const theatricalInFuture = theatricalDateMidnight && theatricalDateMidnight > now;
-    const streamingInFuture = streamingDateMidnight && streamingDateMidnight > now;
-
-    processedMovie.canFollow = 
-      (theatricalInPast60Days && (!streamingDateMidnight || streamingDateMidnight > now)) ||
-      theatricalInFuture ||
-      (!theatricalDateMidnight && streamingInFuture);
-
-    processedMovie.displayDate = streamingDateMidnight
-      ? streamingDateMidnight.toISOString().split("T")[0]
-      : theatricalDateMidnight
-        ? theatricalDateMidnight.toISOString().split("T")[0] + " (Theatrical)"
-        : "Coming Soon";
-  }
-
-  if (options.type === 'upcoming') {
-    // Include movies with any future date OR no dates (trust TMDB's upcoming API)
-    const hasFutureDate = (streamingDateMidnight && streamingDateMidnight > now) ||
-                         (theatricalDateMidnight && theatricalDateMidnight > now) ||
-                         (!streamingDateMidnight && !theatricalDateMidnight);
-    
-    processedMovie.canFollow = hasFutureDate;
-
-    processedMovie.displayDate = streamingDateMidnight
-      ? streamingDateMidnight.toISOString().split("T")[0]
-      : theatricalDateMidnight
-        ? theatricalDateMidnight.toISOString().split("T")[0] + " (Theatrical)"
-        : "Coming Soon";
   }
 
   return processedMovie;

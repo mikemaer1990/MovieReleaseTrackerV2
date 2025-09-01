@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { getFollowedMoviesByUserId } = require("../services/airtable");
+const { getMovieDisplayDate } = require("../utils/date-helpers");
 
 router.get("/", async (req, res) => {
   if (!req.session.userId) {
@@ -39,7 +40,8 @@ router.get("/", async (req, res) => {
           }
         }
         
-        moviesMap.set(tmdbId, {
+        // Create base movie object with TMDB-like structure
+        const baseMovie = {
           id: tmdbId,
           title: record.fields.Title,
           releaseDate: formattedReleaseDate,
@@ -47,7 +49,21 @@ router.get("/", async (req, res) => {
           posterPath: record.fields.PosterPath,
           followTypes: [],
           airtableRecords: [],
-        });
+          // Add TMDB-like properties for unified date processing
+          release_date: formattedReleaseDate,
+          streamingDateRaw: record.fields.StreamingReleaseDate || null,
+          poster_path: record.fields.PosterPath,
+        };
+
+        // Apply unified date processing
+        const dateInfo = getMovieDisplayDate(baseMovie, { context: 'my-movies' });
+        baseMovie.displayDate = dateInfo.displayText;
+        baseMovie.dateType = dateInfo.dateType;
+        baseMovie.dateStatusClass = dateInfo.statusClass;
+        baseMovie.theatricalFormatted = dateInfo.theatricalFormatted;
+        baseMovie.streamingFormatted = dateInfo.streamingFormatted;
+
+        moviesMap.set(tmdbId, baseMovie);
       }
 
       const movie = moviesMap.get(tmdbId);

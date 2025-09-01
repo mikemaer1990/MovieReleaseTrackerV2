@@ -14,15 +14,15 @@
       
       <!-- Prominent Release Date -->
       <div class="hero-release-info">
-        <% if (movie.release_date) { %>
+        <% if (movie.theatricalFormatted) { %>
           <div class="hero-release-date">
             <span class="release-label">🎬 In Theaters</span>
-            <span class="release-date"><%= new Date(movie.release_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+            <span class="release-date"><%= movie.theatricalFormatted %></span>
           </div>
         <% } %>
         <div class="hero-streaming-date">
           <span class="streaming-label">📺 Streaming</span>
-          <span class="streaming-date"><%= movie.streaming_date ? new Date(movie.streaming_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'TBA' %></span>
+          <span class="streaming-date"><%= movie.streamingFormatted || 'TBA' %></span>
         </div>
       </div>
     </div>
