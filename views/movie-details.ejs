@@ -14,10 +14,10 @@
       
       <!-- Prominent Release Date -->
       <div class="hero-release-info">
-        <% if (movie.theatricalFormatted) { %>
+        <% if (movie.release_date) { %>
           <div class="hero-release-date">
             <span class="release-label">🎬 In Theaters</span>
-            <span class="release-date"><%= movie.theatricalFormatted %></span>
+            <span class="release-date"><%= new Date(movie.release_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
           </div>
         <% } %>
         <div class="hero-streaming-date">
@@ -49,8 +49,8 @@
         </div>
         
         <div class="info-item">
-          <span class="info-label"><span class="info-icon">📅</span>Release Date</span>
-          <span class="info-value info-value-date"><%= movie.release_date ? new Date(movie.release_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'TBA' %></span>
+          <span class="info-label"><span class="info-icon">🎬</span>Release Date</span>
+          <span class="info-value info-value-date"><%= movie.release_date ? new Date(movie.release_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'TBA' %></span>
         </div>
         
         <div class="info-item">

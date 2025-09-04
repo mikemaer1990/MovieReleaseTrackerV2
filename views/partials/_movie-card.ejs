@@ -24,25 +24,6 @@
 
   <h3 class="movie-title"><%= movie.title %></h3>
 
-  <div class="movie-dates">
-    <% if (movie.displayDate) { %>
-      <span class="release-date <%= movie.dateStatusClass || '' %>">
-        <%= movie.displayDate %>
-      </span>
-    <% } else if (movie.releaseDate || movie.streamingReleaseDate) { %>
-      <% if (movie.streamingReleaseDate) { %>
-        <span class="release-date streaming">
-          <%= new Date(movie.streamingReleaseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %>
-        </span>
-      <% } else if (movie.releaseDate) { %>
-        <span class="release-date theatrical">
-          <%= new Date(movie.releaseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %> (Theatrical)
-        </span>
-      <% } %>
-    <% } else { %>
-      <span class="release-date tba">TBA</span>
-    <% } %>
-  </div>
 
   <div class="follow-status">
     <%- include('_follow-badges', { movie }) %> <%- include('_follow-actions', {

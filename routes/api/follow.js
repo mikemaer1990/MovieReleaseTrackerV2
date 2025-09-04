@@ -16,7 +16,7 @@ router.post("/follow", userActionLimiter, async (req, res) => {
     });
   }
 
-  let { movieId, title, posterPath, followType } = req.body;
+  let { movieId, title, posterPath, followType, releaseDate } = req.body;
   followType = (followType || "").toLowerCase();
 
   if (!validFollowTypes.includes(followType)) {
@@ -27,28 +27,36 @@ router.post("/follow", userActionLimiter, async (req, res) => {
   }
 
   try {
+    // Get movie details to fetch the correct theatrical release date
+    const { getMovieDetails } = require("../../services/tmdb");
+    const movieDetails = await getMovieDetails(movieId);
+    const theatricalDate = movieDetails?.release_date || null;
+
     const followTypesToCreate =
       followType === "both" ? ["theatrical", "streaming"] : [followType];
 
     await Promise.all(
       followTypesToCreate.map(async (type) => {
-        let releaseDate = null;
+        let specificReleaseDate = null;
+        let streamingDate = null;
+        
         if (type === "streaming") {
-          releaseDate = await getStreamingReleaseDate(movieId);
+          streamingDate = await getStreamingReleaseDate(movieId);
+          specificReleaseDate = streamingDate;
+        } else if (type === "theatrical") {
+          specificReleaseDate = theatricalDate;
         }
-        // Add theatrical date logic here if needed
 
         await followMovie(req.session.airtableRecordId, {
           TMDB_ID: Number(movieId),
           Title: title,
-          ReleaseDate: releaseDate,
+          ReleaseDate: specificReleaseDate,
           PosterPath: posterPath,
           User: [req.session.airtableRecordId],
           UserID: req.session.userId,
           FollowType: type,
-          StreamingDateAvailable: type === "streaming" && Boolean(releaseDate),
-          StreamingReleaseDate:
-            type === "streaming" ? releaseDate || null : null,
+          StreamingDateAvailable: type === "streaming" && Boolean(streamingDate),
+          StreamingReleaseDate: streamingDate,
         });
       })
     );
