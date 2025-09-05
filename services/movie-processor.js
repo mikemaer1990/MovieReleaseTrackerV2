@@ -50,7 +50,11 @@ async function processMovieWithDates(movie, options = {}) {
     theatricalDate: theatricalDateMidnight,
     rating: movie.vote_average || 0,
     popularity: movie.popularity || 0,
+    vote_count: movie.vote_count || 0,
   };
+
+  // Calculate quality score: rating weighted by popularity (logarithmic to prevent popularity dominance)
+  processedMovie.qualityScore = processedMovie.rating * Math.log(processedMovie.popularity + 1);
 
   // Use unified date handling for all contexts
   const dateInfo = getMovieDisplayDate(processedMovie, { context: options.type || 'general' });
@@ -92,7 +96,7 @@ async function processMoviesWithDates(movies, options = {}) {
  * @returns {Array} Filtered movies
  */
 function filterMovies(movies, filterOptions = {}) {
-  const { type, genre } = filterOptions;
+  const { type, genre, minVoteCount, maxRating } = filterOptions;
 
   let filtered = movies;
 
@@ -110,6 +114,16 @@ function filterMovies(movies, filterOptions = {}) {
     filtered = filtered.filter(movie => 
       movie.genre_ids && movie.genre_ids.includes(parseInt(genre))
     );
+  }
+
+  // Apply minimum vote count filtering if specified (for rating-based sorting)
+  if (minVoteCount && typeof minVoteCount === 'number') {
+    filtered = filtered.filter(movie => movie.vote_count >= minVoteCount);
+  }
+
+  // Apply maximum rating filtering if specified (eliminates suspicious perfect ratings)
+  if (maxRating && typeof maxRating === 'number') {
+    filtered = filtered.filter(movie => movie.rating <= maxRating);
   }
 
   return filtered;
@@ -136,8 +150,9 @@ function sortMovies(movies, sortBy = 'popularity') {
 
     case "rating":
       return moviesCopy.sort((a, b) => {
-        const ratingCompare = b.rating - a.rating;
-        return ratingCompare !== 0 ? ratingCompare : a.id - b.id;
+        // Use quality score (rating weighted by popularity) instead of raw rating
+        const qualityCompare = b.qualityScore - a.qualityScore;
+        return qualityCompare !== 0 ? qualityCompare : a.id - b.id;
       });
 
     case "popularity":
