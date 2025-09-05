@@ -98,7 +98,11 @@
               <span>✓</span> Following
             </button>
           <% } else { %>
-            <button class="follow-action-btn" data-movie-id="<%= movie.id %>"data-title="<%= movie.title.replace(/"/g, '&quot;') %>"data-poster-path="<%= movie.poster_path %>">
+            <button class="follow-action-btn" 
+                    data-movie-id="<%= movie.id %>"
+                    data-title="<%= movie.title.replace(/"/g, '&quot;') %>"
+                    data-poster-path="<%= movie.poster_path %>"
+                    data-release-date="<%= movie.release_date %>">
               <span>+</span> Follow Movie
             </button>
           <% } %>
@@ -175,8 +179,9 @@ document.addEventListener('DOMContentLoaded', function() {
   if (followBtn) {
     followBtn.addEventListener('click', async function() {
       const movieId = this.dataset.movieId;
-      const movieTitle = this.dataset.title;         // <--- Added
-      const moviePosterPath = this.dataset.posterPath; // <--- Added
+      const movieTitle = this.dataset.title;         
+      const moviePosterPath = this.dataset.posterPath; 
+      const releaseDate = this.dataset.releaseDate;
       const button = this;
       
       // Add loading state
@@ -192,6 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
             movieId: movieId,
             title: movieTitle,
             posterPath: moviePosterPath,
+            releaseDate: releaseDate,
             followType: 'both', // or 'theatrical', 'streaming'
           }),
         });

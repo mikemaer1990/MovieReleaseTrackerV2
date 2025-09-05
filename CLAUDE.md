@@ -321,3 +321,8 @@ When implementing UI features, verify:
 - Documentation changes
 - Test file modifications
 - Non-visual utility functions
+
+## Test Credentials
+
+- Email: your-email@example.com
+- Password: your-password

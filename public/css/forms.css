@@ -207,7 +207,7 @@
 .filter-controls {
   max-width: 1200px;
   margin: 0 auto 2rem auto;
-  padding: 0 var(--spacing-xl);
+  padding: 0;
 }
 
 .filter-form {
@@ -519,7 +519,7 @@
 /* Enhanced Filter Responsive Design */
 @media (max-width: 768px) {
   .filter-controls {
-    padding: 0 var(--spacing-md);
+    padding: 0;
   }
 
   .filter-form {
@@ -669,7 +669,7 @@
 
 @media (max-width: 768px) {
   .filter-controls {
-    padding: var(--spacing-lg) var(--spacing-md) 0;
+    padding: 0;
   }
 
   .filter-form {

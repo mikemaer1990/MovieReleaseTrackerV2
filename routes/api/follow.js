@@ -18,6 +18,7 @@ router.post("/follow", userActionLimiter, async (req, res) => {
 
   let { movieId, title, posterPath, followType, releaseDate } = req.body;
   followType = (followType || "").toLowerCase();
+  
 
   if (!validFollowTypes.includes(followType)) {
     return res.status(400).json({
@@ -31,6 +32,7 @@ router.post("/follow", userActionLimiter, async (req, res) => {
     const { getMovieDetails } = require("../../services/tmdb");
     const movieDetails = await getMovieDetails(movieId);
     const theatricalDate = movieDetails?.release_date || null;
+    
 
     const followTypesToCreate =
       followType === "both" ? ["theatrical", "streaming"] : [followType];
@@ -46,6 +48,7 @@ router.post("/follow", userActionLimiter, async (req, res) => {
         } else if (type === "theatrical") {
           specificReleaseDate = theatricalDate;
         }
+        
 
         await followMovie(req.session.airtableRecordId, {
           TMDB_ID: Number(movieId),

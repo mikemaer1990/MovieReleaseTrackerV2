@@ -56,7 +56,6 @@
 
 
 .controls-content {
-  padding: 0;
   position: relative;
   z-index: 2;
 }
@@ -67,7 +66,7 @@
   border-radius: 0;
   box-shadow: none;
   border: none;
-  padding: 0;
+  max-width: none;
 }
 
 /* Ensure dropdowns appear above all modules */
@@ -184,10 +183,13 @@
   }
   
   .module-header,
-  .controls-content,
   .content-main,
   .content-footer {
     padding: var(--spacing-lg);
+  }
+  
+  .controls-content {
+    padding: 0;
   }
   
   .controls-header {
@@ -196,5 +198,13 @@
   
   .controls-header h2 {
     font-size: 1.125rem;
+  }
+}
+
+@media (max-width: 500px) {
+  .controls-content .filter-controls {
+    max-width: none;
+    margin: 0;
+    padding: 0;
   }
 }
