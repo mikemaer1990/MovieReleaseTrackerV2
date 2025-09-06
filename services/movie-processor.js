@@ -71,7 +71,7 @@ async function processMovieWithDates(movie, options = {}) {
 
   // Add context-specific properties for backward compatibility
   if (options.type === 'releases') {
-    processedMovie.hasRecentStreaming = streamingDateMidnight || theatricalDateMidnight;
+    processedMovie.hasRecentStreaming = streamingDateMidnight !== null;
   }
 
   return processedMovie;
