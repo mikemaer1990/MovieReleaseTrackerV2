@@ -70,6 +70,7 @@ router.get("/top-releases", async (req, res) => {
 
       // Filter for movies with recent streaming releases
       const validMovies = filterMovies(processedMovies, { type: 'releases' });
+      
       allValidMovies = allValidMovies.concat(validMovies);
       tmdbPage++;
     }

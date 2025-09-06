@@ -17,12 +17,12 @@
         <% if (movie.release_date) { %>
           <div class="hero-release-date">
             <span class="release-label">🎬 In Theaters</span>
-            <span class="release-date"><%= new Date(movie.release_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+            <span class="release-date"><%= new Date(movie.release_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
           </div>
         <% } %>
         <div class="hero-streaming-date">
           <span class="streaming-label">📺 Streaming</span>
-          <span class="streaming-date"><%= movie.streaming_date ? new Date(movie.streaming_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'TBA' %></span>
+          <span class="streaming-date"><%= movie.streamingFormatted || 'TBA' %></span>
         </div>
       </div>
     </div>
@@ -49,8 +49,8 @@
         </div>
         
         <div class="info-item">
-          <span class="info-label"><span class="info-icon">📅</span>Release Date</span>
-          <span class="info-value info-value-date"><%= movie.release_date ? new Date(movie.release_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'TBA' %></span>
+          <span class="info-label"><span class="info-icon">🎬</span>Release Date</span>
+          <span class="info-value info-value-date"><%= movie.release_date ? new Date(movie.release_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'TBA' %></span>
         </div>
         
         <div class="info-item">
@@ -98,7 +98,11 @@
               <span>✓</span> Following
             </button>
           <% } else { %>
-            <button class="follow-action-btn" data-movie-id="<%= movie.id %>"data-title="<%= movie.title.replace(/"/g, '&quot;') %>"data-poster-path="<%= movie.poster_path %>">
+            <button class="follow-action-btn" 
+                    data-movie-id="<%= movie.id %>"
+                    data-title="<%= movie.title.replace(/"/g, '&quot;') %>"
+                    data-poster-path="<%= movie.poster_path %>"
+                    data-release-date="<%= movie.release_date %>">
               <span>+</span> Follow Movie
             </button>
           <% } %>
@@ -175,8 +179,9 @@ document.addEventListener('DOMContentLoaded', function() {
   if (followBtn) {
     followBtn.addEventListener('click', async function() {
       const movieId = this.dataset.movieId;
-      const movieTitle = this.dataset.title;         // <--- Added
-      const moviePosterPath = this.dataset.posterPath; // <--- Added
+      const movieTitle = this.dataset.title;         
+      const moviePosterPath = this.dataset.posterPath; 
+      const releaseDate = this.dataset.releaseDate;
       const button = this;
       
       // Add loading state
@@ -192,6 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
             movieId: movieId,
             title: movieTitle,
             posterPath: moviePosterPath,
+            releaseDate: releaseDate,
             followType: 'both', // or 'theatrical', 'streaming'
           }),
         });

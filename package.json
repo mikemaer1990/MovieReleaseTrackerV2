@@ -20,7 +20,7 @@
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "express-ejs-layouts": "^2.5.1",
-    "express-rate-limit": "^7.4.1",
+    "express-rate-limit": "^8.1.0",
     "express-session": "^1.18.2",
     "node-cache": "^5.1.2",
     "uuid": "^11.1.0"

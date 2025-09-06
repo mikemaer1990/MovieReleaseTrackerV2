@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { getFollowedMoviesByUserId } = require("../services/airtable");
+const { getMovieDisplayDate } = require("../utils/date-helpers");
 
 router.get("/", async (req, res) => {
   if (!req.session.userId) {
@@ -39,7 +40,9 @@ router.get("/", async (req, res) => {
           }
         }
         
-        moviesMap.set(tmdbId, {
+        
+        // Create base movie object with TMDB-like structure
+        const baseMovie = {
           id: tmdbId,
           title: record.fields.Title,
           releaseDate: formattedReleaseDate,
@@ -47,7 +50,21 @@ router.get("/", async (req, res) => {
           posterPath: record.fields.PosterPath,
           followTypes: [],
           airtableRecords: [],
-        });
+          // Add TMDB-like properties for unified date processing
+          release_date: formattedReleaseDate,
+          streamingDateRaw: record.fields.StreamingReleaseDate || null,
+          poster_path: record.fields.PosterPath,
+        };
+
+        // Apply unified date processing
+        const dateInfo = getMovieDisplayDate(baseMovie, { context: 'my-movies' });
+        baseMovie.displayDate = dateInfo.displayText;
+        baseMovie.dateType = dateInfo.dateType;
+        baseMovie.dateStatusClass = dateInfo.statusClass;
+        baseMovie.theatricalFormatted = dateInfo.theatricalFormatted;
+        baseMovie.streamingFormatted = dateInfo.streamingFormatted;
+
+        moviesMap.set(tmdbId, baseMovie);
       }
 
       const movie = moviesMap.get(tmdbId);
@@ -63,14 +80,52 @@ router.get("/", async (req, res) => {
           const streamingDate = new Date(record.fields.StreamingReleaseDate);
           if (!isNaN(streamingDate.getTime())) {
             movie.streamingReleaseDate = record.fields.StreamingReleaseDate;
+            movie.streamingDateRaw = record.fields.StreamingReleaseDate;
           }
         } catch (error) {
           console.warn(`Invalid streaming date format for movie ${record.fields.Title}:`, record.fields.StreamingReleaseDate);
         }
       }
+      
+      // Update theatrical date if this record has one and we don't have a good one yet
+      if ((!movie.releaseDate || !movie.release_date) && record.fields.ReleaseDate && followType === "theatrical") {
+        try {
+          const theatricalDate = new Date(record.fields.ReleaseDate);
+          if (!isNaN(theatricalDate.getTime())) {
+            const formattedTheatricalDate = theatricalDate.toISOString().split('T')[0];
+            movie.releaseDate = formattedTheatricalDate;
+            movie.release_date = formattedTheatricalDate;
+          }
+        } catch (error) {
+          console.warn(`Invalid theatrical date format for movie ${record.fields.Title}:`, record.fields.ReleaseDate);
+        }
+      }
     });
 
     const consolidatedMovies = Array.from(moviesMap.values());
+    
+    // Re-process date information after consolidation
+    consolidatedMovies.forEach(movie => {
+      const dateInfo = getMovieDisplayDate(movie, { context: 'my-movies' });
+      movie.displayDate = dateInfo.displayText;
+      movie.dateType = dateInfo.dateType;
+      movie.dateStatusClass = dateInfo.statusClass;
+      movie.theatricalFormatted = dateInfo.theatricalFormatted;
+      movie.streamingFormatted = dateInfo.streamingFormatted;
+    });
+
+    // Default sort: soonest first (will be handled client-side)
+    consolidatedMovies.sort((a, b) => {
+      const getMovieDate = (movie) => {
+        if (movie.streamingReleaseDate) return new Date(movie.streamingReleaseDate);
+        if (movie.releaseDate || movie.release_date) return new Date(movie.releaseDate || movie.release_date);
+        return new Date('9999-12-31');
+      };
+      
+      const dateA = getMovieDate(a);
+      const dateB = getMovieDate(b);
+      return dateA - dateB; // Soonest first by default
+    });
 
     // 4. Calculate stats (your existing logic)
     const totalMovies = consolidatedMovies.length;
