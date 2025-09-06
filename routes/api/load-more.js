@@ -34,33 +34,50 @@ router.get("/load-more-releases", dataRetrievalLimiter, async (req, res) => {
         break;
     }
 
-    // Calculate the correct TMDB page to request
-    // Initial load used pages 1 through initialPagesUsed
-    // Load more page 2 should start from TMDB page (initialPagesUsed + 1)
-    const tmdbPage = initialPagesUsed + (page - 1);
+    const moviesPerPage = 20;
+    let allValidMovies = [];
+    let tmdbPage = initialPagesUsed + (page - 1);
+    let totalTmdbPages = Infinity;
+    const maxPagesToFetch = 5; // Limit to prevent infinite loops
 
-    // Fetch the next page directly from TMDB using centralized service
-    const response = await discoverMovies({
-      page: tmdbPage,
-      region: "US",
-      sort_by: tmdbSortBy,
-      "primary_release_date.gte": sixMonthsAgo.toISOString().split('T')[0],
-      "primary_release_date.lte": now.toISOString().split('T')[0],
-      with_release_type: "4|5", // Digital and Physical releases
-      ...(genre && { with_genres: genre })
-    });
+    // Keep fetching until we have enough valid movies for this page
+    while (
+      allValidMovies.length < moviesPerPage &&
+      tmdbPage <= totalTmdbPages &&
+      (tmdbPage - (initialPagesUsed + (page - 1))) < maxPagesToFetch
+    ) {
+      // Build API params
+      const apiParams = {
+        page: tmdbPage,
+        region: "US",
+        sort_by: tmdbSortBy,
+        "primary_release_date.gte": sixMonthsAgo.toISOString().split('T')[0],
+        "primary_release_date.lte": now.toISOString().split('T')[0],
+        with_release_type: "4|5", // Digital and Physical releases
+        ...(genre && { with_genres: genre })
+      };
 
-    // Process movies using shared utility
-    const processedMovies = await processMoviesWithDates(response.results, { type: 'releases' });
-    
-    // Filter movies using shared utility
-    const validMovies = filterMovies(processedMovies, { type: 'releases', genre });
-    
+      const response = await discoverMovies(apiParams);
+      totalTmdbPages = response.total_pages;
+
+      // Process movies using shared utility
+      const processedMovies = await processMoviesWithDates(response.results, { type: 'releases' });
+      
+      // Filter movies using shared utility
+      const validMovies = filterMovies(processedMovies, { type: 'releases', genre });
+      
+      allValidMovies = allValidMovies.concat(validMovies);
+      tmdbPage++;
+    }
+
     // Apply sorting using shared utility (only if not handled by TMDB)
-    const sortedMovies = sortBy !== "popularity" ? sortMovies(validMovies, sortBy) : validMovies;
+    const sortedMovies = sortBy !== "popularity" ? sortMovies(allValidMovies, sortBy) : allValidMovies;
+
+    // Take exactly the number of movies we want
+    const pageMovies = sortedMovies.slice(0, moviesPerPage);
 
     // Determine if there are more pages available
-    const hasMore = tmdbPage < response.total_pages;
+    const hasMore = tmdbPage <= totalTmdbPages;
 
     // Get user's followed movies for proper follow button rendering
     let followedMovieIds = [];
@@ -74,7 +91,7 @@ router.get("/load-more-releases", dataRetrievalLimiter, async (req, res) => {
     }
 
     // Render HTML using shared utility
-    const html = await renderMovieCards(req, sortedMovies, {
+    const html = await renderMovieCards(req, pageMovies, {
       showFollowButton: true,
       user: req.session?.userId ? { id: req.session.userId, name: req.session.userName } : null,
       followedMovieIds,
@@ -83,10 +100,10 @@ router.get("/load-more-releases", dataRetrievalLimiter, async (req, res) => {
     });
 
     // Create standardized response
-    const responseData = createLoadMoreResponse(sortedMovies, html, {
+    const responseData = createLoadMoreResponse(pageMovies, html, {
       hasMore,
       currentPage: page,
-      moviesPerPage: 20
+      moviesPerPage
     });
 
     res.json(responseData);
