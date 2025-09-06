@@ -197,6 +197,7 @@ async function createMovieTestSuite() {
   // Test some known movies with potential date issues
   const testMovies = [
     986097, // HIM - known issue
+    1054867, // One Battle After Another - checking release data
     // Add more movie IDs here as needed
   ];
   

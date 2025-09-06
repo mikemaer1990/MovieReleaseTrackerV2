@@ -76,7 +76,6 @@ const myMoviesRouter = require("./routes/my-movies");
 const checkReleases = require("./routes/check-releases");
 const movieDetailsRoutes = require("./routes/movie-details");
 const topReleasesRouter = require("./routes/top-releases");
-const testTopReleasesRouter = require("./routes/test-top-releases");
 const checkStreamingDatesRouter = require("./routes/check-streaming-dates");
 
 // ADD: Centralized API routes
@@ -94,7 +93,6 @@ app.use("/my-movies", dataRetrievalLimiter, myMoviesRouter);
 app.use("/jobs/check-releases", checkReleases); // No rate limiting for cron jobs
 app.use("/movie", dataRetrievalLimiter, movieDetailsRoutes);
 app.use("/", dataRetrievalLimiter, topReleasesRouter);
-app.use("/", dataRetrievalLimiter, testTopReleasesRouter);
 app.use("/jobs/check-streaming-dates", checkStreamingDatesRouter); // No rate limiting for cron jobs
 
 // Mount API routes (rate limiting applied at route level)
