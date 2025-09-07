@@ -213,6 +213,8 @@ function getPageConfig() {
     return {
       endpoint: '/load-more-upcoming',
       params: {
+        sort: urlParams.get('sort') || 'popularity',
+        genre: urlParams.get('genre') || '',
         initialPagesUsed: initialPagesUsed
       }
     };

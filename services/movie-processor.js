@@ -137,6 +137,31 @@ function sortMovies(movies, sortBy = 'popularity') {
         return dateCompare !== 0 ? dateCompare : a.id - b.id;
       });
 
+    case "release_date_asc":
+      return moviesCopy.sort((a, b) => {
+        const dateA = new Date(a.release_date || '9999-12-31');
+        const dateB = new Date(b.release_date || '9999-12-31');
+        const dateCompare = dateA - dateB;
+        return dateCompare !== 0 ? dateCompare : a.id - b.id;
+      });
+
+    case "release_date_desc":
+      return moviesCopy.sort((a, b) => {
+        const dateA = new Date(a.release_date || '1900-01-01');
+        const dateB = new Date(b.release_date || '1900-01-01');
+        const dateCompare = dateB - dateA;
+        return dateCompare !== 0 ? dateCompare : a.id - b.id;
+      });
+
+    case "vote_average":
+      return moviesCopy.sort((a, b) => {
+        // Pure TMDB rating sort (requires minimum vote count for reliability)
+        if (a.vote_count < 10 && b.vote_count >= 10) return 1;
+        if (b.vote_count < 10 && a.vote_count >= 10) return -1;
+        const ratingCompare = b.rating - a.rating;
+        return ratingCompare !== 0 ? ratingCompare : a.id - b.id;
+      });
+
     case "rating":
       return moviesCopy.sort((a, b) => {
         // Use quality score (rating weighted by popularity) instead of raw rating

@@ -10,6 +10,15 @@
     </div>
   <% } %>
 
+  <%- include('partials/_page-controls', { 
+    showControls: true,
+    actionUrl: '/upcoming',
+    sortOptions,
+    sortBy,
+    genres,
+    genre
+  }) %>
+
   <%- include('partials/_page-content', { 
     movies,
     user,
@@ -18,7 +27,7 @@
     showResultsCount: true,
     showLoadMore: true,
     showFollowButton: true,
-    emptyMessage: 'No upcoming movies found.'
+    emptyMessage: 'No upcoming movies found for the selected criteria.'
   }) %>
 </div>
 
@@ -28,3 +37,4 @@
 </script>
 <script src="/js/movie-cards.js"></script>
 <script src="/js/load-more.js"></script>
+<script src="/js/custom-dropdown.js"></script>

@@ -1,6 +1,7 @@
 // services/tmdb.js
 const axios = require("axios");
 const { getCachedData, setCachedData } = require("./cache");
+const { toUtcMidnight, getSixMonthsFromNow } = require("../utils/date-helpers");
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
@@ -141,6 +142,76 @@ async function getUpcomingMovies(page = 1, region = "US") {
 }
 
 /**
+ * Get extended upcoming movies (0-6 months ahead) using discover endpoint
+ * Uses TMDB server-side sorting for accurate results
+ */
+async function getExtendedUpcomingMovies(page = 1, region = "US", sortBy = "popularity") {
+  try {
+    const now = toUtcMidnight(new Date());
+    const sixMonthsFromNow = getSixMonthsFromNow(now);
+    
+    // Map our sort options to TMDB's sort_by parameter
+    let tmdbSortBy = "popularity.desc";
+    switch (sortBy) {
+      case "release_date_asc":
+        tmdbSortBy = "primary_release_date.asc";
+        break;
+      case "release_date_desc":
+        tmdbSortBy = "primary_release_date.desc";
+        break;
+      case "popularity":
+        tmdbSortBy = "popularity.desc";
+        break;
+      default:
+        tmdbSortBy = "popularity.desc";
+        break;
+    }
+    
+    let allMovies = [];
+    let totalPages = 1;
+    
+    // Use discover endpoint with proper TMDB server-side sorting
+    const response = await tmdbAxios.get(`/discover/movie`, {
+      params: {
+        page,
+        region,
+        'primary_release_date.gte': now.toISOString().split('T')[0],
+        'primary_release_date.lte': sixMonthsFromNow.toISOString().split('T')[0],
+        sort_by: tmdbSortBy,
+        'with_runtime.gte': 60, // Filter out movies shorter than 60 minutes
+        without_companies: '2|7|527|1771|33400', // Filter out major Russian/Indian production companies
+        'with_original_language': 'en|es|fr|de|it|ja|ko|pt|zh', // Include major international languages, exclude Russian (ru) and Hindi (hi)
+        'vote_count.gte': 0 // No minimum vote requirement
+      }
+    });
+    
+    // Filter out movies without poster images and unwanted languages/origins
+    allMovies = (response.data.results || []).filter(movie => {
+      // Must have poster
+      if (!movie.poster_path || movie.poster_path.trim() === '') return false;
+      
+      // Filter out Russian and Indian content
+      const originalLanguage = movie.original_language;
+      const excludedLanguages = ['ru', 'hi', 'te', 'ta', 'ml', 'kn', 'bn', 'ur', 'pa'];
+      
+      return !excludedLanguages.includes(originalLanguage);
+    });
+    totalPages = response.data.total_pages || 1;
+    
+    return {
+      page,
+      results: allMovies,
+      total_pages: totalPages,
+      total_results: allMovies.length * totalPages // Approximate
+    };
+    
+  } catch (error) {
+    console.error("Error fetching extended upcoming movies:", error);
+    throw error;
+  }
+}
+
+/**
  * Discover movies with filters
  */
 async function discoverMovies(options = {}) {
@@ -177,6 +248,7 @@ module.exports = {
   getMovieDetails,
   searchMovies,
   getUpcomingMovies,
+  getExtendedUpcomingMovies,
   discoverMovies,
   getGenres,
   tmdbAxios // Export for any custom needs

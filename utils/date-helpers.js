@@ -191,9 +191,33 @@ function canFollowMovie(movie, options = {}) {
   return true; // Default to allowing follows
 }
 
+/**
+ * Get date 6 months from now
+ * @param {Date} fromDate - Starting date (defaults to now)
+ * @returns {Date} Date 6 months in the future
+ */
+function getSixMonthsFromNow(fromDate = new Date()) {
+  const date = new Date(fromDate);
+  date.setMonth(date.getMonth() + 6);
+  return date;
+}
+
+/**
+ * Get date 4 weeks from now
+ * @param {Date} fromDate - Starting date (defaults to now)
+ * @returns {Date} Date 4 weeks in the future
+ */
+function getFourWeeksFromNow(fromDate = new Date()) {
+  const date = new Date(fromDate);
+  date.setDate(date.getDate() + 28);
+  return date;
+}
+
 module.exports = {
   toUtcMidnight,
   formatDisplayDate,
   getMovieDisplayDate,
-  canFollowMovie
+  canFollowMovie,
+  getSixMonthsFromNow,
+  getFourWeeksFromNow
 };
