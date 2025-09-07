@@ -17,12 +17,12 @@
       <div class="overlay-dates">
         <% if (movie.release_date) { %>
         <div class="date-item theatrical">
-          🎭 <%= new Date(movie.release_date).toLocaleDateString('en-US', {
+          🎭 <%= new Date(movie.release_date + 'T00:00:00').toLocaleDateString('en-US', {
           year: 'numeric', month: 'short', day: 'numeric' }) %>
         </div>
         <% } %> <% if (movie.streamingDateRaw) { %>
         <div class="date-item streaming">
-          📺 <%= new Date(movie.streamingDateRaw).toLocaleDateString('en-US', {
+          📺 <%= new Date(movie.streamingDateRaw + 'T00:00:00').toLocaleDateString('en-US', {
           year: 'numeric', month: 'short', day: 'numeric' }) %>
         </div>
         <% } %> <% if (!movie.release_date && !movie.streamingDateRaw) { %>

@@ -1,4 +1,4 @@
-const { getStreamingReleaseDate, getMovieDetails } = require("./tmdb");
+const { getReleaseData, getMovieDetails } = require("./tmdb");
 const { toUtcMidnight, getMovieDisplayDate, canFollowMovie } = require("../utils/date-helpers");
 
 /**
@@ -16,26 +16,15 @@ const { toUtcMidnight, getMovieDisplayDate, canFollowMovie } = require("../utils
 async function processMovieWithDates(movie, options = {}) {
   const now = toUtcMidnight(new Date());
   
-  // Fetch streaming date
-  const streamingDateRaw = await getStreamingReleaseDate(movie.id);
-  const streamingDate = streamingDateRaw ? new Date(streamingDateRaw) : null;
+  // Fetch all release data with single API call
+  const releaseData = await getReleaseData(movie.id);
   
-  // For releases, fetch proper theatrical date from movie details API
-  // since discover API with release_type filter returns streaming dates
-  let theatricalDate = null;
-  if (options.type === 'releases') {
-    try {
-      const movieDetails = await getMovieDetails(movie.id);
-      theatricalDate = movieDetails.release_date
-        ? new Date(movieDetails.release_date)
-        : null;
-    } catch (error) {
-      console.error(`Error fetching theatrical date for movie ${movie.id}:`, error);
-      theatricalDate = movie.release_date ? new Date(movie.release_date) : null;
-    }
-  } else {
-    theatricalDate = movie.release_date ? new Date(movie.release_date) : null;
-  }
+  // Prioritize US theatrical date over primary release date
+  const theatricalDateString = releaseData.usTheatrical || releaseData.primary || movie.release_date;
+  const streamingDateRaw = releaseData.streaming;
+  
+  const theatricalDate = theatricalDateString ? new Date(theatricalDateString + 'T00:00:00') : null;
+  const streamingDate = streamingDateRaw ? new Date(streamingDateRaw + 'T00:00:00') : null;
 
   // Convert to midnight for consistent comparisons
   const streamingDateMidnight = streamingDate ? toUtcMidnight(streamingDate) : null;
@@ -44,7 +33,7 @@ async function processMovieWithDates(movie, options = {}) {
   // Base processed movie object
   const processedMovie = {
     ...movie,
-    release_date: theatricalDate ? theatricalDate.toISOString().split('T')[0] : movie.release_date, // Use proper theatrical date
+    release_date: theatricalDateString || movie.release_date, // Use proper theatrical date string directly
     streamingDateRaw,
     streamingDate: streamingDateMidnight,
     theatricalDate: theatricalDateMidnight,

@@ -14,33 +14,79 @@ const tmdbAxios = axios.create({
 });
 
 /**
- * Get streaming release date for a movie
+ * Get unified release data for a movie (theatrical, streaming, primary dates)
+ * Single API call to fetch all release date information efficiently
  */
-async function getStreamingReleaseDate(movieId) {
+async function getReleaseData(movieId) {
   try {
     const response = await tmdbAxios.get(`/movie/${movieId}/release_dates`);
     const results = response.data.results;
 
-    if (!Array.isArray(results) || results.length === 0) return null;
+    // Get primary release date from basic movie info
+    let primaryDate = null;
+    try {
+      const movieDetails = await tmdbAxios.get(`/movie/${movieId}`);
+      primaryDate = movieDetails.data.release_date;
+    } catch (error) {
+      console.error(`Error fetching primary date for movie ${movieId}:`, error);
+    }
 
-    // Try to get releases for your region (US), else fallback to first available region
-    let releases = results.find((r) => r.iso_3166_1 === "US");
-    if (!releases) releases = results[0]; // fallback
-    if (!releases || !Array.isArray(releases.release_dates)) return null;
+    if (!Array.isArray(results) || results.length === 0) {
+      return {
+        usTheatrical: null,
+        streaming: null,
+        primary: primaryDate
+      };
+    }
 
-    // Filter for digital (4) or physical (5) release types
-    const homeReleases = releases.release_dates
-      .filter((r) => [4, 5].includes(r.type))
-      .sort((a, b) => new Date(a.release_date) - new Date(b.release_date));
+    // Look specifically for US releases
+    const usReleases = results.find(r => r.iso_3166_1 === "US");
+    
+    let usTheatrical = null;
+    let streaming = null;
 
-    if (homeReleases.length === 0) return null;
+    if (usReleases && Array.isArray(usReleases.release_dates)) {
+      // Extract US theatrical dates (types 2 = limited theatrical, 3 = wide theatrical)
+      const theatricalReleases = usReleases.release_dates
+        .filter(r => [2, 3].includes(r.type))
+        .sort((a, b) => new Date(a.release_date) - new Date(b.release_date));
+      
+      if (theatricalReleases.length > 0) {
+        usTheatrical = theatricalReleases[0].release_date.split("T")[0];
+      }
 
-    // Return earliest streaming release date in YYYY-MM-DD format
-    return homeReleases[0].release_date.split("T")[0];
+      // Extract streaming dates (types 4 = digital, 5 = physical)
+      const streamingReleases = usReleases.release_dates
+        .filter(r => [4, 5].includes(r.type))
+        .sort((a, b) => new Date(a.release_date) - new Date(b.release_date));
+      
+      if (streamingReleases.length > 0) {
+        streaming = streamingReleases[0].release_date.split("T")[0];
+      }
+    }
+
+    return {
+      usTheatrical,
+      streaming,
+      primary: primaryDate
+    };
+
   } catch (error) {
-    console.error("Error fetching streaming release date:", error);
-    return null;
+    console.error(`Error fetching release data for movie ${movieId}:`, error);
+    return {
+      usTheatrical: null,
+      streaming: null,
+      primary: null
+    };
   }
+}
+
+/**
+ * Get streaming release date for a movie (backward compatibility wrapper)
+ */
+async function getStreamingReleaseDate(movieId) {
+  const releaseData = await getReleaseData(movieId);
+  return releaseData.streaming;
 }
 
 /**
@@ -126,6 +172,7 @@ async function getGenres() {
 }
 
 module.exports = {
+  getReleaseData,
   getStreamingReleaseDate,
   getMovieDetails,
   searchMovies,

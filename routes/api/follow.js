@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { userActionLimiter } = require("../../middleware/rate-limiting");
-const { getStreamingReleaseDate } = require("../../services/tmdb");
+const { getReleaseData } = require("../../services/tmdb");
 const { followMovie, unfollowMovie } = require("../../services/airtable");
 const { clearCache } = require("../../services/cache");
 
@@ -28,10 +28,12 @@ router.post("/follow", userActionLimiter, async (req, res) => {
   }
 
   try {
-    // Get movie details to fetch the correct theatrical release date
-    const { getMovieDetails } = require("../../services/tmdb");
-    const movieDetails = await getMovieDetails(movieId);
-    const theatricalDate = movieDetails?.release_date || null;
+    // Get unified release data (theatrical, streaming, primary dates)
+    const releaseData = await getReleaseData(movieId);
+    
+    // Prioritize US theatrical date over primary release date
+    const theatricalDate = releaseData.usTheatrical || releaseData.primary || null;
+    const streamingDate = releaseData.streaming;
     
 
     const followTypesToCreate =
@@ -40,10 +42,10 @@ router.post("/follow", userActionLimiter, async (req, res) => {
     await Promise.all(
       followTypesToCreate.map(async (type) => {
         let specificReleaseDate = null;
-        let streamingDate = null;
+        let streamingReleaseDate = null;
         
         if (type === "streaming") {
-          streamingDate = await getStreamingReleaseDate(movieId);
+          streamingReleaseDate = streamingDate;
           specificReleaseDate = streamingDate;
         } else if (type === "theatrical") {
           specificReleaseDate = theatricalDate;
@@ -58,8 +60,8 @@ router.post("/follow", userActionLimiter, async (req, res) => {
           User: [req.session.airtableRecordId],
           UserID: req.session.userId,
           FollowType: type,
-          StreamingDateAvailable: type === "streaming" && Boolean(streamingDate),
-          StreamingReleaseDate: streamingDate,
+          StreamingDateAvailable: type === "streaming" && Boolean(streamingReleaseDate),
+          StreamingReleaseDate: streamingReleaseDate,
         });
       })
     );

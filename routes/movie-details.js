@@ -1,7 +1,7 @@
 // routes/movie-details.js
 const express = require("express");
 const router = express.Router();
-const { getStreamingReleaseDate, getMovieDetails } = require("../services/tmdb");
+const { getReleaseData, getMovieDetails } = require("../services/tmdb");
 const { getFollowedMoviesByUserId } = require("../services/airtable");
 const { getMovieDisplayDate } = require("../utils/date-helpers");
 // Caching
@@ -77,10 +77,16 @@ router.get("/:id", async (req, res) => {
     // Get detailed movie information from TMDB using centralized service
     const movie = await getMovieDetails(movieId, "credits,videos");
 
-    // Get streaming release date
-    const streamingDate = await getStreamingReleaseDate(movieId);
-    movie.streaming_date = streamingDate;
-    movie.streamingDateRaw = streamingDate;
+    // Get unified release data (theatrical, streaming, primary dates)
+    const releaseData = await getReleaseData(movieId);
+    
+    // Prioritize US theatrical date over primary release date
+    const theatricalDateString = releaseData.usTheatrical || releaseData.primary || movie.release_date;
+    movie.release_date = theatricalDateString || movie.release_date;
+    
+    // Set streaming dates
+    movie.streaming_date = releaseData.streaming;
+    movie.streamingDateRaw = releaseData.streaming;
 
     // Add unified date display information
     const dateInfo = getMovieDisplayDate(movie, { context: 'details' });

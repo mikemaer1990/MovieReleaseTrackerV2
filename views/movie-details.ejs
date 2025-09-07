@@ -55,7 +55,7 @@
         
         <div class="info-item">
           <span class="info-label"><span class="info-icon">📺</span>Streaming Date</span>
-          <span class="info-value info-value-date"><%= movie.streaming_date ? new Date(movie.streaming_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'TBA' %></span>
+          <span class="info-value info-value-date"><%= movie.streaming_date ? new Date(movie.streaming_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'TBA' %></span>
         </div>
         
         <% if (movie.runtime) { %>

@@ -18,7 +18,7 @@
     let streamingDate = '';
     if (movie.streamingReleaseDate) {
       try {
-        const date = new Date(movie.streamingReleaseDate);
+        const date = new Date(movie.streamingReleaseDate + 'T00:00:00');
         if (!isNaN(date.getTime())) {
           streamingDate = date.toISOString().split('T')[0];
         }

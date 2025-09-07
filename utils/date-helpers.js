@@ -19,7 +19,8 @@ function formatDisplayDate(date, options = {}) {
   if (!date) return '';
   
   try {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    // Handle date strings to avoid timezone issues
+    const dateObj = typeof date === 'string' ? new Date(date + 'T00:00:00') : date;
     if (isNaN(dateObj.getTime())) return '';
     
     const { includeYear = true, short = false } = options;
@@ -53,9 +54,9 @@ function getMovieDisplayDate(movie, options = {}) {
   const { context = 'general' } = options;
   const now = toUtcMidnight(new Date());
   
-  // Parse dates consistently
-  const theatricalDate = movie.release_date ? toUtcMidnight(new Date(movie.release_date)) : null;
-  const streamingDate = movie.streamingDateRaw ? toUtcMidnight(new Date(movie.streamingDateRaw)) : null;
+  // Parse dates consistently, avoiding timezone issues
+  const theatricalDate = movie.release_date ? toUtcMidnight(new Date(movie.release_date + 'T00:00:00')) : null;
+  const streamingDate = movie.streamingDateRaw ? toUtcMidnight(new Date(movie.streamingDateRaw + 'T00:00:00')) : null;
   
   // Determine primary date and type based on context and availability
   let primaryDate = null;
@@ -131,7 +132,7 @@ function getMovieDisplayDate(movie, options = {}) {
     } else if (theatricalDate) {
       primaryDate = theatricalDate;
       dateType = 'theatrical';  
-      displayText = `${formatDisplayDate(theatricalDate)} (Theatrical)`;
+      displayText = `${formatDisplayDate(movie.release_date)} (Theatrical)`;
       statusClass = 'theatrical';
     } else {
       displayText = 'TBA';
@@ -146,8 +147,8 @@ function getMovieDisplayDate(movie, options = {}) {
     statusClass,
     theatricalDate,
     streamingDate,
-    theatricalFormatted: theatricalDate ? formatDisplayDate(theatricalDate) : null,
-    streamingFormatted: streamingDate ? formatDisplayDate(streamingDate) : null
+    theatricalFormatted: theatricalDate ? formatDisplayDate(movie.release_date) : null,
+    streamingFormatted: streamingDate ? formatDisplayDate(movie.streamingDateRaw) : null
   };
 }
 
@@ -161,8 +162,8 @@ function canFollowMovie(movie, options = {}) {
   const { context = 'general' } = options;
   const now = toUtcMidnight(new Date());
   
-  const theatricalDate = movie.release_date ? toUtcMidnight(new Date(movie.release_date)) : null;
-  const streamingDate = movie.streamingDateRaw ? toUtcMidnight(new Date(movie.streamingDateRaw)) : null;
+  const theatricalDate = movie.release_date ? toUtcMidnight(new Date(movie.release_date + 'T00:00:00')) : null;
+  const streamingDate = movie.streamingDateRaw ? toUtcMidnight(new Date(movie.streamingDateRaw + 'T00:00:00')) : null;
   
   if (context === 'upcoming') {
     // For upcoming page, allow following if any future date OR no dates (trust TMDB)
