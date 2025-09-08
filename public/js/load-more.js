@@ -208,8 +208,8 @@ function getPageConfig() {
 
   // Upcoming page
   if (path === '/upcoming') {
-    // Get initialPagesUsed from global variable if available
     const initialPagesUsed = window.initialPagesUsed || 3;
+    
     return {
       endpoint: '/load-more-upcoming',
       params: {

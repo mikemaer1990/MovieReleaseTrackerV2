@@ -84,6 +84,9 @@ const apiRoutes = require("./routes/api");
 // Admin routes for rate limiting
 const adminRoutes = require("./routes/api/admin");
 
+// Pagination admin routes
+const paginationAdminRoutes = require("./routes/api/pagination-admin");
+
 // Apply rate limiting to routes
 app.use("/", dataRetrievalLimiter, indexRoutes);
 app.use("/", dataRetrievalLimiter, searchResultsRouter);
@@ -100,6 +103,9 @@ app.use("/", apiRoutes);
 
 // Admin routes
 app.use("/api/admin", strictLimiter, adminRoutes);
+
+// Pagination admin routes
+app.use("/api/pagination", strictLimiter, paginationAdminRoutes);
 
 // 404 handler
 app.use((req, res) => {

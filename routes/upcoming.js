@@ -3,88 +3,84 @@ const router = express.Router();
 const { getFollowedMoviesByUserId } = require("../services/airtable");
 const { processMoviesWithDates, filterMovies, sortMovies, deduplicateMovies } = require("../services/movie-processor");
 const { getExtendedUpcomingMovies, getGenres } = require("../services/tmdb");
-const { toUtcMidnight } = require("../utils/date-helpers");
+const moviePaginationService = require("../services/movie-pagination");
 router.get("/upcoming", async (req, res) => {
   const followMessage = req.query.followMessage || null;
   const sortBy = req.query.sort || "popularity";
   const genre = req.query.genre || null;
   const moviesPerPage = 20;
-  const now = toUtcMidnight(new Date());
 
   try {
     let pageMovies = [];
     let initialPagesUsed = 0;
 
-    // For date-based sorting: fetch more pages and sort properly
-    if (sortBy === 'release_date_asc' || sortBy === 'release_date_desc') {
-      // Fetch larger batch for proper date sorting
-      let collectedMovies = [];
-      let tmdbPage = 1;
-      const maxPagesToFetch = 15; // Fetch more pages for better sorting and larger buffer
+    // Try pagination service first for better performance
+    try {
+      const paginationResult = await moviePaginationService.getSortedPage(
+        sortBy, 
+        1, // First page
+        moviesPerPage, 
+        [], // No excluded IDs on initial load
+        genre
+      );
+
+      pageMovies = paginationResult.movies;
       
-      while (tmdbPage <= maxPagesToFetch) {
-        const response = await getExtendedUpcomingMovies(tmdbPage, "US", sortBy);
-        const results = response.results;
+      // For pagination service, we use a different tracking method
+      initialPagesUsed = 1; // Pagination service handles this internally
+      
+    } catch (paginationError) {
+      console.warn('Pagination service failed, falling back to original method:', paginationError);
+      
+      // Fallback to original implementation
+      if (sortBy === 'release_date_asc' || sortBy === 'release_date_desc') {
+        // Date-based sorting fallback
+        let collectedMovies = [];
+        let tmdbPage = 1;
+        const maxPagesToFetch = 15;
         
-        // Process movies with dates using the centralized service
-        const processedMovies = await processMoviesWithDates(results, { type: 'upcoming' });
+        while (tmdbPage <= maxPagesToFetch) {
+          const response = await getExtendedUpcomingMovies(tmdbPage, "US", sortBy);
+          const results = response.results;
+          
+          const processedMovies = await processMoviesWithDates(results, { type: 'upcoming' });
+          const filteredMovies = filterMovies(processedMovies, { type: 'upcoming', genre });
+          
+          collectedMovies.push(...filteredMovies);
+          tmdbPage++;
+          
+          if (tmdbPage > response.total_pages) break;
+        }
         
-        // Filter movies that can be followed
-        const filteredMovies = filterMovies(processedMovies, { type: 'upcoming', genre });
+        const deduplicatedMovies = deduplicateMovies(collectedMovies, []);
+        const sortedMovies = sortMovies(deduplicatedMovies, sortBy);
         
-        collectedMovies.push(...filteredMovies);
-        tmdbPage++;
+        pageMovies = sortedMovies.slice(0, moviesPerPage);
+        initialPagesUsed = tmdbPage - 1;
         
-        if (tmdbPage > response.total_pages) break;
+      } else {
+        // Popularity-based sorting fallback
+        let collectedMovies = [];
+        let tmdbPage = 1;
+        const maxPagesToFetch = 10;
+        
+        while (collectedMovies.length < moviesPerPage && tmdbPage <= maxPagesToFetch) {
+          const response = await getExtendedUpcomingMovies(tmdbPage, "US", sortBy);
+          const results = response.results;
+
+          const processedMovies = await processMoviesWithDates(results, { type: 'upcoming' });
+          const filteredMovies = filterMovies(processedMovies, { type: 'upcoming', genre });
+          const newFiltered = deduplicateMovies(filteredMovies, collectedMovies);
+
+          collectedMovies.push(...newFiltered);
+          tmdbPage++;
+
+          if (tmdbPage > response.total_pages) break;
+        }
+
+        pageMovies = collectedMovies.slice(0, moviesPerPage);
+        initialPagesUsed = tmdbPage - 1;
       }
-      
-      // Deduplicate the entire collection
-      const deduplicatedMovies = deduplicateMovies(collectedMovies, []);
-      
-      // Sort the entire collection properly by date
-      const sortedMovies = sortMovies(deduplicatedMovies, sortBy);
-      
-      // Take first page from sorted results
-      pageMovies = sortedMovies.slice(0, moviesPerPage);
-      
-      // Store how many pages we used for load-more to use the same approach
-      initialPagesUsed = tmdbPage - 1;
-      
-    } else {
-      // For non-date sorting (popularity): use existing sequential approach
-      let collectedMovies = [];
-      let tmdbPage = 1;
-      let totalTmdbPages = 1;
-      const maxPagesToFetch = 10;
-      
-      // Collect movies until we have enough for initial load
-      while (
-        collectedMovies.length < moviesPerPage &&
-        tmdbPage <= maxPagesToFetch
-      ) {
-        const response = await getExtendedUpcomingMovies(tmdbPage, "US", sortBy);
-
-        totalTmdbPages = response.total_pages;
-        const results = response.results;
-
-        // Process movies with dates using the centralized service
-        const processedMovies = await processMoviesWithDates(results, { type: 'upcoming' });
-        
-        // Filter movies that can be followed and deduplicate using shared utility
-        const filteredMovies = filterMovies(processedMovies, { type: 'upcoming', genre });
-        const newFiltered = deduplicateMovies(filteredMovies, collectedMovies);
-
-        collectedMovies.push(...newFiltered);
-        tmdbPage++;
-
-        if (tmdbPage > totalTmdbPages) break;
-      }
-
-      // Take exactly the number of movies we want
-      pageMovies = collectedMovies.slice(0, moviesPerPage);
-      
-      // Store which TMDB pages were used for initial load in session/cache
-      initialPagesUsed = tmdbPage - 1;
     }
 
     let user = null;
@@ -121,8 +117,8 @@ router.get("/upcoming", async (req, res) => {
       genres,
       query: "",
       loginRedirect: "/upcoming",
-      initialLoad: true, // Flag to indicate this is initial load
-      initialPagesUsed: initialPagesUsed, // Track which TMDB pages were consumed
+      initialLoad: true,
+      initialPagesUsed: initialPagesUsed,
       sortOptions: [
         { value: "popularity", label: "Most Popular" },
         { value: "release_date_asc", label: "Soonest First" },
@@ -130,7 +126,7 @@ router.get("/upcoming", async (req, res) => {
       ],
     });
   } catch (err) {
-    console.error("TMDB upcoming movies error:", err);
+    console.error("Upcoming movies error:", err);
     res.status(500).send("Something went wrong");
   }
 });
