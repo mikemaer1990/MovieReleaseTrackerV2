@@ -93,11 +93,11 @@ async function followMovie(airtableUserRecordId, movieData) {
         ...movieData,
         FollowType: movieData.FollowType,
         StreamingDateAvailable:
-          movieData.FollowType === "Streaming" &&
-          Boolean(movieData.ReleaseDate),
+          movieData.FollowType === "streaming" &&
+          Boolean(movieData.StreamingReleaseDate),
         StreamingReleaseDate:
-          movieData.FollowType === "Streaming"
-            ? movieData.ReleaseDate || null
+          movieData.FollowType === "streaming"
+            ? movieData.StreamingReleaseDate || null
             : null,
         User: [airtableUserRecordId],
         UserID: movieData.UserID,

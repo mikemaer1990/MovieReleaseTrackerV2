@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const airtableAxios = require("../services/airtable").airtableAxios;
 const sendEmail = require("../services/send-email");
-const { generateReleaseEmailHTML } = require("../services/email-templates");
+const { generateReleaseEmailHTML, generateReleaseBatchEmailHTML } = require("../services/email-templates");
 const AIRTABLE_FOLLOWED_MOVIES_TABLE = "FollowedMovies";
 const cronSecret = process.env.CRON_SECRET;
 
@@ -92,43 +92,93 @@ router.get("/", async (req, res) => {
       };
     });
 
-    console.log(`[RELEASE-CHECK] Sending ${dueReleases.length} release notification emails...`);
+    // Group releases by user email for batched notifications
+    const releasesByUser = {};
+    dueReleases.forEach((release) => {
+      if (!release.userEmail) {
+        console.log(`[RELEASE-CHECK] No email for user, skipping "${release.title}"`);
+        return;
+      }
+      
+      if (!releasesByUser[release.userEmail]) {
+        releasesByUser[release.userEmail] = [];
+      }
+      releasesByUser[release.userEmail].push(release);
+    });
+
+    const userEmails = Object.keys(releasesByUser);
+    console.log(`[RELEASE-CHECK] Sending batched release notifications to ${userEmails.length} users...`);
     
     const emailResults = [];
     const emailsSent = [];
     let emailsFailed = 0;
     
-    // Send emails with detailed tracking
+    // Send batched emails with detailed tracking
     await Promise.allSettled(
-      dueReleases.map(async (release) => {
-        if (!release.userEmail) {
-          console.log(`[RELEASE-CHECK] No email for user, skipping "${release.title}"`);
-          return;
-        }
-
-        const isStreaming = release.followType === "streaming";
-        const releaseTypeText = isStreaming ? "streaming" : "in theaters";
-        const emoji = isStreaming ? "📺" : "🎬";
-
-        const subject = `${emoji} "${release.title}" is ${
-          isStreaming ? "available for streaming" : "now in theaters"
-        }!`;
+      userEmails.map(async (userEmail) => {
+        const userReleases = releasesByUser[userEmail];
+        const movieCount = userReleases.length;
         
-        const htmlContent = generateReleaseEmailHTML({
-          title: release.title,
-          posterPath: release.posterPath,
-          releaseDate: release.releaseDate,
-          followType: release.followType,
-          tmdbId: release.id
-        });
-
         try {
-          await sendEmail({ to: release.userEmail, subject, htmlContent });
-          console.log(`[RELEASE-CHECK] Email sent to ${release.userEmail} for "${release.title}" (${release.followType})`);
-          emailsSent.push(`${release.title} (${release.followType})`);
+          if (movieCount === 1) {
+            // Send individual email for single movie (maintains existing UX)
+            const release = userReleases[0];
+            const isStreaming = release.followType === "streaming";
+            const emoji = isStreaming ? "📺" : "🎬";
+
+            const subject = `${emoji} "${release.title}" is ${
+              isStreaming ? "available for streaming" : "now in theaters"
+            }!`;
+            
+            const htmlContent = generateReleaseEmailHTML({
+              title: release.title,
+              posterPath: release.posterPath,
+              releaseDate: release.releaseDate,
+              followType: release.followType,
+              tmdbId: release.id
+            });
+
+            await sendEmail({ to: userEmail, subject, htmlContent });
+            console.log(`[RELEASE-CHECK] Individual email sent to ${userEmail} for "${release.title}" (${release.followType})`);
+            emailsSent.push(`${release.title} (${release.followType})`);
+            
+          } else {
+            // Send batched email for multiple movies
+            const theatricalCount = userReleases.filter(r => r.followType === 'theatrical').length;
+            const streamingCount = userReleases.filter(r => r.followType === 'streaming').length;
+            
+            let subjectEmojis = '';
+            let subjectText = '';
+            
+            if (theatricalCount > 0 && streamingCount > 0) {
+              subjectEmojis = '🎬📺';
+              subjectText = `${movieCount} of your movies are available today!`;
+            } else if (theatricalCount > 0) {
+              subjectEmojis = '🎬';
+              subjectText = `${movieCount} of your movies are now in theaters!`;
+            } else {
+              subjectEmojis = '📺';
+              subjectText = `${movieCount} of your movies are available for streaming!`;
+            }
+
+            const subject = `${subjectEmojis} ${subjectText}`;
+            
+            const htmlContent = generateReleaseBatchEmailHTML({
+              movies: userReleases,
+              date: todayStr
+            });
+
+            await sendEmail({ to: userEmail, subject, htmlContent });
+            console.log(`[RELEASE-CHECK] Batch email sent to ${userEmail} for ${movieCount} movies (${theatricalCount} theatrical, ${streamingCount} streaming)`);
+            
+            // Add all movies to the sent list
+            userReleases.forEach(release => {
+              emailsSent.push(`${release.title} (${release.followType})`);
+            });
+          }
         } catch (err) {
           console.error(
-            `[RELEASE-CHECK] Failed to send email to ${release.userEmail} for "${release.title}":`,
+            `[RELEASE-CHECK] Failed to send email to ${userEmail} for ${movieCount} movies:`,
             err.message
           );
           emailsFailed++;
@@ -136,7 +186,7 @@ router.get("/", async (req, res) => {
       })
     );
 
-    console.log(`[RELEASE-CHECK] Completed! Theatrical: ${theatricalMovies.length}, Streaming: ${streamingMovies.length}, Emails sent: ${emailsSent.length}, Failed: ${emailsFailed}`);
+    console.log(`[RELEASE-CHECK] Completed! Theatrical: ${theatricalMovies.length}, Streaming: ${streamingMovies.length}, Users notified: ${userEmails.length}, Movie notifications: ${emailsSent.length}, Failed: ${emailsFailed}`);
 
     return res.json({
       success: true,
@@ -144,7 +194,8 @@ router.get("/", async (req, res) => {
       date: todayStr,
       theatrical: theatricalMovies.length,
       streaming: streamingMovies.length,
-      totalEmails: emailsSent.length,
+      usersNotified: userEmails.length,
+      totalMovieNotifications: emailsSent.length,
       emailsFailed,
       releases: emailsSent,
       theatricalReleases: theatricalMovies.map(m => m.fields.Title),

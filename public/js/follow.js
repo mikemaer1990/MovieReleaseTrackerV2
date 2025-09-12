@@ -172,6 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const followType = target.dataset.type;
       const title = container.dataset.title;
       const releaseDate = container.dataset.releaseDate;
+      const streamingDate = container.dataset.streamingDate;
       const posterPath = container.dataset.posterPath;
 
       // Store original state for error recovery
@@ -188,6 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
           movieId,
           title,
           releaseDate,
+          streamingDate,
           posterPath,
           followType,
         });

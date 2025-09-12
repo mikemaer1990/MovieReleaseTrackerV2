@@ -16,8 +16,17 @@ router.post("/follow", userActionLimiter, async (req, res) => {
     });
   }
 
-  let { movieId, title, posterPath, followType, releaseDate } = req.body;
+  let { movieId, title, posterPath, followType, releaseDate, streamingDate } = req.body;
   followType = (followType || "").toLowerCase();
+  
+  console.log(`[DEBUG] Follow request received:`, {
+    movieId,
+    title,
+    followType,
+    releaseDate,
+    streamingDate,
+    frontendProvidedStreamingDate: !!streamingDate
+  });
   
 
   if (!validFollowTypes.includes(followType)) {
@@ -28,12 +37,23 @@ router.post("/follow", userActionLimiter, async (req, res) => {
   }
 
   try {
-    // Get unified release data (theatrical, streaming, primary dates)
-    const releaseData = await getReleaseData(movieId);
+    // Use streaming date from frontend if available, otherwise fetch from TMDB as fallback
+    let finalStreamingDate = streamingDate || null;
+    let theatricalDate = null;
     
-    // Prioritize US theatrical date over primary release date
-    const theatricalDate = releaseData.usTheatrical || releaseData.primary || null;
-    const streamingDate = releaseData.streaming;
+    if (!finalStreamingDate || !releaseDate) {
+      // Get unified release data from TMDB as fallback
+      const releaseData = await getReleaseData(movieId);
+      
+      // Use TMDB data as fallback if not provided by frontend
+      theatricalDate = releaseData.usTheatrical || releaseData.primary || null;
+      if (!finalStreamingDate) {
+        finalStreamingDate = releaseData.streaming;
+      }
+    } else {
+      // Use release date from frontend as theatrical date if available
+      theatricalDate = releaseDate || null;
+    }
     
 
     const followTypesToCreate =
@@ -45,8 +65,8 @@ router.post("/follow", userActionLimiter, async (req, res) => {
         let streamingReleaseDate = null;
         
         if (type === "streaming") {
-          streamingReleaseDate = streamingDate;
-          specificReleaseDate = streamingDate;
+          streamingReleaseDate = finalStreamingDate;
+          specificReleaseDate = null; // Don't populate ReleaseDate for streaming records
         } else if (type === "theatrical") {
           specificReleaseDate = theatricalDate;
         }
@@ -72,6 +92,11 @@ router.post("/follow", userActionLimiter, async (req, res) => {
     res.json({
       success: true,
       message: `You are now following "${title}" (${followType}).`,
+      debug: {
+        receivedStreamingDate: streamingDate,
+        finalStreamingDate,
+        frontendProvidedStreamingDate: !!streamingDate
+      }
     });
   } catch (error) {
     console.error("Error following movie:", error);

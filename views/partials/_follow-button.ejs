@@ -3,7 +3,8 @@
     <div class="follow-container"
          data-movie-id="<%= movie.id %>"
          data-title="<%= movie.title %>"
-         data-release-date="<%= movie.displayDate %>"
+         data-release-date="<%= movie.release_date %>"
+         data-streaming-date="<%= movie.streamingDateRaw || '' %>"
          data-poster-path="<%= movie.poster_path %>">
 
       <% if (followedMovieIds && followedMovieIds.includes(Number(movie.id))) { %>
