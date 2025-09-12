@@ -101,3 +101,40 @@ User followed "Wake Up Dead Man: A Knives Out Mystery" for streaming only with k
 
 ## Priority: High
 This affects user experience when following streaming-only releases, which are becoming increasingly common with platform exclusives.
+
+---
+
+# Server Improvements & Security
+
+## Priority: Medium
+
+### Security Improvements
+- [ ] Enable firewall with UFW (allow SSH, HTTP, HTTPS only)
+- [ ] Secure environment file permissions (chmod 600 .env)
+- [ ] Enable automatic security updates via unattended-upgrades
+
+### Monitoring & Performance
+- [ ] Install htop for resource monitoring
+- [ ] Set up basic server monitoring with PM2 monit
+
+### SSL Enhancement
+- [ ] Upgrade Cloudflare SSL from Flexible to Full (strict) mode
+
+### Commands Reference
+```bash
+# Firewall setup
+ufw allow ssh
+ufw allow 'Nginx Full'
+ufw --force enable
+
+# File permissions
+chmod 600 /var/www/movietracker/.env
+
+# Auto updates
+apt install unattended-upgrades
+dpkg-reconfigure unattended-upgrades
+
+# Monitoring tools
+apt install htop
+pm2 monit
+```
