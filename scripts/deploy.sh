@@ -101,7 +101,7 @@ pm2 status $APP_NAME
 
 # Test if application is responding
 print_status "Testing application health..."
-if curl -s -f http://localhost:3010/upcoming > /dev/null; then
+if curl -s -f http://localhost:3000/upcoming > /dev/null; then
     print_success "✅ Application is responding correctly!"
 else
     print_error "❌ Application health check failed!"
@@ -124,7 +124,7 @@ print_status "Check status: pm2 status $APP_NAME"
 if [ "$BRANCH_NAME" = "api-optimizations" ]; then
     print_status "Running performance test for optimizations..."
     echo "Testing upcoming route performance..."
-    RESPONSE_TIME=$(curl -o /dev/null -s -w "%{time_total}" http://localhost:3010/upcoming?sort=popularity)
+    RESPONSE_TIME=$(curl -o /dev/null -s -w "%{time_total}" http://localhost:3000/upcoming?sort=popularity)
     echo "Response time: ${RESPONSE_TIME}s"
 
     if (( $(echo "$RESPONSE_TIME < 1.0" | bc -l) )); then
