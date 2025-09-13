@@ -12,6 +12,58 @@ node app.js
 
 The server runs on port 3000 by default (configurable via PORT environment variable).
 
+## Production Deployment
+
+### Digital Ocean VPS Deployment
+
+The production application is deployed on a Digital Ocean Ubuntu droplet using PM2 process manager.
+
+**Server Details:**
+- **Host**: [Server IP - see deployment notes]
+- **Directory**: `/var/www/movietracker`
+- **PM2 App Name**: `movietracker`
+- **Process Manager**: PM2
+
+**Deployment Steps:**
+
+```bash
+# 1. SSH into the production server
+ssh root@[SERVER_IP]
+
+# 2. Navigate to application directory
+cd /var/www/movietracker
+
+# 3. Pull latest changes from GitHub
+git pull origin main
+
+# 4. Install dependencies (if package.json changed)
+npm install
+
+# 5. Restart application with PM2
+pm2 restart movietracker
+
+# 6. Check application status
+pm2 status
+
+# 7. View logs if needed
+pm2 logs movietracker
+```
+
+**Quick deployment one-liner:**
+```bash
+cd /var/www/movietracker && git pull origin main && pm2 restart movietracker
+```
+
+**PM2 Management Commands:**
+```bash
+pm2 status                    # Check all processes
+pm2 logs movietracker         # View application logs
+pm2 restart movietracker      # Restart the application
+pm2 stop movietracker         # Stop the application
+pm2 start movietracker        # Start the application
+pm2 reload movietracker       # Zero-downtime reload
+```
+
 ## Application Architecture
 
 This is a Node.js/Express.js movie release tracking web application with the following architecture:
