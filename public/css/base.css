@@ -3,14 +3,27 @@
    Foundation styles for the entire application
 ============================ */
 
-/* Universal box-sizing reset */
+/* Universal box-sizing reset and overflow protection */
 *, *::before, *::after {
   box-sizing: border-box;
 }
 
-/* HTML and body width control */
-html, body {
+/* Prevent flex/grid items from causing overflow */
+* {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* HTML and body width control - Enhanced */
+html {
   max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+body {
+  max-width: 100vw;
+  width: 100%;
 }
 
 /* Base body styling */
