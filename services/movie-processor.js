@@ -1,5 +1,6 @@
 const { getReleaseData, getMovieDetails } = require("./tmdb");
 const { toUtcMidnight, getMovieDisplayDate, canFollowMovie } = require("../utils/date-helpers");
+const bulkMovieProcessor = require("./bulk-movie-processor");
 
 /**
  * Movie Processing Service
@@ -68,11 +69,23 @@ async function processMovieWithDates(movie, options = {}) {
 
 /**
  * Process an array of movies with dates and metadata
+ * Uses bulk processing for better performance when available
  * @param {Array} movies - Array of raw movie objects from TMDB
  * @param {Object} options - Processing options
  * @returns {Array} Array of processed movies
  */
 async function processMoviesWithDates(movies, options = {}) {
+  // Use bulk processor for better performance when processing multiple movies
+  if (Array.isArray(movies) && movies.length > 3) {
+    try {
+      return await bulkMovieProcessor.processMoviesBulk(movies, options);
+    } catch (error) {
+      console.warn('Bulk processing failed, falling back to individual processing:', error);
+      // Fall back to individual processing
+    }
+  }
+
+  // Original individual processing for small arrays or as fallback
   return Promise.all(
     movies.map(movie => processMovieWithDates(movie, options))
   );
