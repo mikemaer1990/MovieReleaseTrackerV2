@@ -13,11 +13,17 @@ class MoviePaginationService {
     this.lastRefresh = new Map();
     this.refreshInProgress = new Map();
     this.refreshInterval = 15 * 60 * 1000; // 15 minutes
-    this.maxPages = 30; // Limit TMDB API calls
+    this.maxPages = 30; // Limit TMDB API calls for full refresh
+
+    // Cache warming for popularity sorting
+    this.popularityCache = new Map();
+    this.popularityCacheTime = null;
+    this.popularityWarmPages = 5; // Fewer pages for fast initial cache
   }
 
   /**
    * Get a paginated subset of movies from sorted collection
+   * HYBRID STRATEGY: Fast popularity cache vs accurate date fetching
    * @param {string} sortBy - Sort criteria
    * @param {number} page - Page number (1-based)
    * @param {number} pageSize - Number of movies per page
@@ -26,32 +32,107 @@ class MoviePaginationService {
    * @returns {Object} Paginated result with movies, hasMore, etc.
    */
   async getSortedPage(sortBy, page, pageSize = 20, excludeIds = [], genre = null) {
+    console.log(`getSortedPage: ${sortBy}, page ${page}, genre ${genre || 'all'}`);
+
+    // HYBRID DECISION: Route to optimized method based on sort type
+    if (sortBy === 'popularity') {
+      return await this.getPopularityPageFast(page, pageSize, excludeIds, genre);
+    }
+
+    if (sortBy.includes('release_date')) {
+      return await this.getDatePageAccurate(sortBy, page, pageSize, excludeIds, genre);
+    }
+
+    // Fallback to original method for other sort types
+    return await this.getSortedPageOriginal(sortBy, page, pageSize, excludeIds, genre);
+  }
+
+  /**
+   * FAST POPULARITY SORTING: Use pre-warmed cache
+   */
+  async getPopularityPageFast(page, pageSize, excludeIds = [], genre = null) {
+    const cacheKey = `popularity_${genre || 'all'}`;
+
+    // Check if we have fresh cached data
+    if (this.isPopularityCacheFresh(cacheKey)) {
+      console.log(`Using pre-warmed popularity cache for ${cacheKey}`);
+      return this.getPageFromCache(this.popularityCache.get(cacheKey), page, pageSize, excludeIds);
+    }
+
+    console.log(`Popularity cache stale/missing for ${cacheKey}, warming now...`);
+
+    // Cache miss or stale - warm it quickly (async for next time)
+    this.warmPopularityCache(genre).catch(console.error);
+
+    // For immediate response, fetch minimal pages
+    return await this.getQuickPopularityResponse(page, pageSize, excludeIds, genre);
+  }
+
+  /**
+   * ACCURATE DATE SORTING: Smart real-time fetch with reduced pages
+   */
+  async getDatePageAccurate(sortBy, page, pageSize, excludeIds = [], genre = null) {
+    const cacheKey = `date_${sortBy}_${genre || 'all'}`;
+
+    // Check for recent date cache (shorter TTL for dates)
+    const cachedResult = this.sortedCollections.get(cacheKey);
+    const cacheAge = Date.now() - (this.lastRefresh.get(cacheKey) || 0);
+
+    if (cachedResult && cacheAge < (5 * 60 * 1000)) { // 5 minute TTL for dates
+      console.log(`Using cached date results for ${cacheKey}`);
+      return this.getPageFromCache(cachedResult, page, pageSize, excludeIds);
+    }
+
+    console.log(`Fetching fresh date results for ${cacheKey}`);
+
+    // Fetch fewer pages for date sorting (but enough for accuracy)
+    const optimizedPages = 8; // Sweet spot: accuracy vs speed
+    const movies = await this.fetchDateSortedMovies(sortBy, optimizedPages, genre);
+
+    // Cache the results
+    this.sortedCollections.set(cacheKey, movies);
+    this.lastRefresh.set(cacheKey, Date.now());
+
+    return this.getPageFromCache(movies, page, pageSize, excludeIds);
+  }
+
+  /**
+   * ORIGINAL METHOD: Fallback for other sort types
+   */
+  async getSortedPageOriginal(sortBy, page, pageSize, excludeIds, genre) {
     const collectionKey = `upcoming_${sortBy}_${genre || 'all'}`;
-    
+
     // Ensure collection is available and fresh
     if (this.needsRefresh(collectionKey)) {
       await this.refreshCollection(collectionKey, sortBy, genre);
     }
-    
+
     const collection = this.sortedCollections.get(collectionKey);
     if (!collection || collection.length === 0) {
       throw new Error(`Collection not available: ${collectionKey}`);
     }
-    
+
+    return this.getPageFromCache(collection, page, pageSize, excludeIds);
+  }
+
+  /**
+   * Extract page from cached movie collection
+   */
+  getPageFromCache(movies, page, pageSize, excludeIds = []) {
     // Apply exclusion filter
-    const availableMovies = collection.filter(movie => !excludeIds.includes(movie.id));
-    
+    const availableMovies = movies.filter(movie => !excludeIds.includes(movie.id));
+
     // Calculate pagination
     const startIndex = (page - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const pageMovies = availableMovies.slice(startIndex, endIndex);
-    
+
     return {
       movies: pageMovies,
       hasMore: endIndex < availableMovies.length,
       totalCount: availableMovies.length,
       currentPage: page,
-      collectionSize: collection.length,
+      collectionSize: movies.length,
       source: 'pagination-service'
     };
   }
@@ -183,29 +264,149 @@ class MoviePaginationService {
   }
 
   /**
+   * Check if popularity cache is fresh
+   */
+  isPopularityCacheFresh(cacheKey) {
+    if (!this.popularityCache.has(cacheKey) || !this.popularityCacheTime) {
+      return false;
+    }
+
+    const cacheAge = Date.now() - this.popularityCacheTime;
+    return cacheAge < (30 * 60 * 1000); // 30 minutes TTL
+  }
+
+  /**
+   * Warm popularity cache with optimized page count
+   */
+  async warmPopularityCache(genre = null) {
+    const cacheKey = `popularity_${genre || 'all'}`;
+
+    console.log(`Warming popularity cache for ${cacheKey}...`);
+
+    try {
+      const movies = [];
+
+      for (let page = 1; page <= this.popularityWarmPages; page++) {
+        const response = await getExtendedUpcomingMovies(page, "US", "popularity");
+
+        if (response.results && response.results.length > 0) {
+          const processed = await processMoviesWithDates(response.results, { type: 'upcoming' });
+          const filtered = filterMovies(processed, { type: 'upcoming', genre });
+          movies.push(...filtered);
+        }
+
+        // Small delay to be nice to TMDB
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // Sort and deduplicate
+      const deduplicated = deduplicateMovies(movies, []);
+      const sorted = sortMovies(deduplicated, 'popularity');
+
+      this.popularityCache.set(cacheKey, sorted);
+      this.popularityCacheTime = Date.now();
+
+      console.log(`Popularity cache warmed: ${sorted.length} movies for ${cacheKey}`);
+
+    } catch (error) {
+      console.error(`Failed to warm popularity cache for ${cacheKey}:`, error);
+    }
+  }
+
+  /**
+   * Quick popularity response for cache misses
+   */
+  async getQuickPopularityResponse(page, pageSize, excludeIds, genre) {
+    console.log('Providing quick popularity response while cache warms...');
+
+    try {
+      // Fetch just 2 pages for immediate response
+      const quickPages = 2;
+      const movies = [];
+
+      for (let tmdbPage = 1; tmdbPage <= quickPages; tmdbPage++) {
+        const response = await getExtendedUpcomingMovies(tmdbPage, "US", "popularity");
+
+        if (response.results && response.results.length > 0) {
+          const processed = await processMoviesWithDates(response.results, { type: 'upcoming' });
+          const filtered = filterMovies(processed, { type: 'upcoming', genre });
+          movies.push(...filtered);
+        }
+      }
+
+      const sorted = sortMovies(movies, 'popularity');
+      return this.getPageFromCache(sorted, page, pageSize, excludeIds);
+
+    } catch (error) {
+      console.error('Quick popularity response failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch date-sorted movies with optimized page count
+   */
+  async fetchDateSortedMovies(sortBy, maxPages, genre) {
+    const movies = [];
+
+    for (let page = 1; page <= maxPages; page++) {
+      try {
+        const response = await getExtendedUpcomingMovies(page, "US", sortBy);
+
+        if (response.results && response.results.length > 0) {
+          const processed = await processMoviesWithDates(response.results, { type: 'upcoming' });
+          const filtered = filterMovies(processed, { type: 'upcoming', genre });
+          movies.push(...filtered);
+        }
+
+        // Rate limiting
+        await new Promise(resolve => setTimeout(resolve, 120));
+
+      } catch (error) {
+        console.error(`Error fetching date page ${page}:`, error);
+        // Continue with next page
+      }
+    }
+
+    // Deduplicate and sort
+    const deduplicated = deduplicateMovies(movies, []);
+    return sortMovies(deduplicated, sortBy);
+  }
+
+  /**
    * Preload common collections for better performance
    * Call this on server startup or via cron job
    */
   async preloadCollections() {
-    const commonCollections = [
-      { sortBy: 'popularity', genre: null },
+    console.log('Preloading movie collections with hybrid strategy...');
+
+    // PRIORITY 1: Warm popularity caches (fast startup essential)
+    try {
+      await this.warmPopularityCache(null); // All genres
+      console.log('✅ Popularity cache warmed');
+    } catch (error) {
+      console.error('❌ Failed to warm popularity cache:', error);
+    }
+
+    // PRIORITY 2: Pre-warm common date collections (background)
+    const dateCollections = [
       { sortBy: 'release_date_asc', genre: null },
       { sortBy: 'release_date_desc', genre: null }
     ];
-    
-    console.log('Preloading movie collections...');
-    
-    for (const { sortBy, genre } of commonCollections) {
-      const collectionKey = `upcoming_${sortBy}_${genre || 'all'}`;
-      
-      try {
-        await this.refreshCollection(collectionKey, sortBy, genre);
-      } catch (error) {
-        console.error(`Failed to preload collection ${collectionKey}:`, error);
+
+    // Run these in background to avoid blocking startup
+    setTimeout(async () => {
+      for (const { sortBy, genre } of dateCollections) {
+        try {
+          await this.fetchDateSortedMovies(sortBy, 6, genre);
+          console.log(`✅ Pre-warmed ${sortBy} collection`);
+        } catch (error) {
+          console.error(`❌ Failed to pre-warm ${sortBy}:`, error);
+        }
       }
-    }
-    
-    console.log('Collection preloading completed');
+    }, 5000); // 5 second delay
+
+    console.log('Hybrid collection preloading initiated');
   }
 
   /**

@@ -87,6 +87,9 @@ const adminRoutes = require("./routes/api/admin");
 // Pagination admin routes
 const paginationAdminRoutes = require("./routes/api/pagination-admin");
 
+// Sort comparison admin routes
+const sortComparisonRoutes = require("./routes/admin/sort-comparison");
+
 // Apply rate limiting to routes
 app.use("/", dataRetrievalLimiter, indexRoutes);
 app.use("/", dataRetrievalLimiter, searchResultsRouter);
@@ -107,6 +110,9 @@ app.use("/api/admin", strictLimiter, adminRoutes);
 // Pagination admin routes
 app.use("/api/pagination", strictLimiter, paginationAdminRoutes);
 
+// Sort comparison admin routes
+app.use("/admin", strictLimiter, sortComparisonRoutes);
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).render("404", {
@@ -114,6 +120,22 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running at http://localhost:${PORT}`);
+
+  // Initialize cache warming for performance optimization
+  console.log('🚀 Initializing performance optimizations...');
+
+  try {
+    const moviePaginationService = require('./services/movie-pagination');
+
+    // Start cache warming in background (don't await - let server start immediately)
+    moviePaginationService.preloadCollections().catch(error => {
+      console.error('Cache warming failed:', error);
+    });
+
+    console.log('✅ Performance optimization initiated');
+  } catch (error) {
+    console.error('⚠️ Failed to initialize performance optimizations:', error);
+  }
 });

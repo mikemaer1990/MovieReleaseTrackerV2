@@ -1,8 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { getFollowedMoviesByUserId } = require("../services/airtable");
-const { processMoviesWithDates, filterMovies, sortMovies, deduplicateMovies } = require("../services/movie-processor");
-const { getExtendedUpcomingMovies, getGenres } = require("../services/tmdb");
+const { getGenres } = require("../services/tmdb");
 const moviePaginationService = require("../services/movie-pagination");
 router.get("/upcoming", async (req, res) => {
   const followMessage = req.query.followMessage || null;
@@ -11,77 +10,21 @@ router.get("/upcoming", async (req, res) => {
   const moviesPerPage = 20;
 
   try {
-    let pageMovies = [];
-    let initialPagesUsed = 0;
+    console.log(`[UPCOMING] Request: sort=${sortBy}, genre=${genre}`);
 
-    // Try pagination service first for better performance
-    try {
-      const paginationResult = await moviePaginationService.getSortedPage(
-        sortBy, 
-        1, // First page
-        moviesPerPage, 
-        [], // No excluded IDs on initial load
-        genre
-      );
+    // HYBRID PAGINATION SERVICE - handles all optimization logic internally
+    const paginationResult = await moviePaginationService.getSortedPage(
+      sortBy,
+      1, // First page
+      moviesPerPage,
+      [], // No excluded IDs on initial load
+      genre
+    );
 
-      pageMovies = paginationResult.movies;
-      
-      // For pagination service, we use a different tracking method
-      initialPagesUsed = 1; // Pagination service handles this internally
-      
-    } catch (paginationError) {
-      console.warn('Pagination service failed, falling back to original method:', paginationError);
-      
-      // Fallback to original implementation
-      if (sortBy === 'release_date_asc' || sortBy === 'release_date_desc') {
-        // Date-based sorting fallback
-        let collectedMovies = [];
-        let tmdbPage = 1;
-        const maxPagesToFetch = 15;
-        
-        while (tmdbPage <= maxPagesToFetch) {
-          const response = await getExtendedUpcomingMovies(tmdbPage, "US", sortBy);
-          const results = response.results;
-          
-          const processedMovies = await processMoviesWithDates(results, { type: 'upcoming' });
-          const filteredMovies = filterMovies(processedMovies, { type: 'upcoming', genre });
-          
-          collectedMovies.push(...filteredMovies);
-          tmdbPage++;
-          
-          if (tmdbPage > response.total_pages) break;
-        }
-        
-        const deduplicatedMovies = deduplicateMovies(collectedMovies, []);
-        const sortedMovies = sortMovies(deduplicatedMovies, sortBy);
-        
-        pageMovies = sortedMovies.slice(0, moviesPerPage);
-        initialPagesUsed = tmdbPage - 1;
-        
-      } else {
-        // Popularity-based sorting fallback
-        let collectedMovies = [];
-        let tmdbPage = 1;
-        const maxPagesToFetch = 10;
-        
-        while (collectedMovies.length < moviesPerPage && tmdbPage <= maxPagesToFetch) {
-          const response = await getExtendedUpcomingMovies(tmdbPage, "US", sortBy);
-          const results = response.results;
+    const pageMovies = paginationResult.movies;
+    console.log(`[UPCOMING] Served ${pageMovies.length} movies via ${paginationResult.source || 'hybrid-service'}`);
 
-          const processedMovies = await processMoviesWithDates(results, { type: 'upcoming' });
-          const filteredMovies = filterMovies(processedMovies, { type: 'upcoming', genre });
-          const newFiltered = deduplicateMovies(filteredMovies, collectedMovies);
-
-          collectedMovies.push(...newFiltered);
-          tmdbPage++;
-
-          if (tmdbPage > response.total_pages) break;
-        }
-
-        pageMovies = collectedMovies.slice(0, moviesPerPage);
-        initialPagesUsed = tmdbPage - 1;
-      }
-    }
+    // All fallback and optimization logic is now handled by the hybrid pagination service
 
     let user = null;
     let followedMovieIds = [];
@@ -118,7 +61,7 @@ router.get("/upcoming", async (req, res) => {
       query: "",
       loginRedirect: "/upcoming",
       initialLoad: true,
-      initialPagesUsed: initialPagesUsed,
+      initialPagesUsed: 1, // Hybrid service abstracts this
       sortOptions: [
         { value: "popularity", label: "Most Popular" },
         { value: "release_date_asc", label: "Soonest First" },
