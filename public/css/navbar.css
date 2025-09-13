@@ -412,6 +412,7 @@
     justify-content: space-between;
     position: relative;
     z-index: 100;
+    padding: var(--spacing-lg) var(--spacing-lg);
   }
 
   .nav-center {

@@ -208,3 +208,9 @@
     padding: 0;
   }
 }
+
+@media (max-width: 480px) {
+  .page-container {
+    padding: var(--spacing-lg) var(--spacing-sm);
+  }
+}
