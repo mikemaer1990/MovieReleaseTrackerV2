@@ -10,7 +10,23 @@ Start the development server:
 node app.js
 ```
 
-The server runs on port 3000 by default (configurable via PORT environment variable).
+The server runs on port 3010 by default (configurable via PORT environment variable).
+
+## Deployment Commands
+
+The project includes a production deployment script:
+
+```bash
+# Deploy to production server
+./scripts/deploy.sh main                    # Deploy stable branch
+./scripts/deploy.sh api-optimizations      # Deploy optimized branch (99% faster)
+
+# Script handles:
+# - Git branch switching
+# - PM2 restart with health checks
+# - Performance testing
+# - Rollback capability
+```
 
 ## Production Deployment
 
