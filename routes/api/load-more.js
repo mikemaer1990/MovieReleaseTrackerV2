@@ -10,74 +10,29 @@ const { getFollowedMoviesByUserId } = require("../../services/airtable");
 // Load more releases endpoint
 router.get("/load-more-releases", dataRetrievalLimiter, async (req, res) => {
   try {
+    const moviePaginationService = require("../../services/movie-pagination");
+
     const page = parseInt(req.query.page) || 2;
     const sortBy = req.query.sort || "popularity";
     const genre = req.query.genre || null;
-    const initialPagesUsed = parseInt(req.query.initialPagesUsed) || 3;
-    
-    const now = toUtcMidnight(new Date());
-    const sixMonthsAgo = new Date(now);
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-    // Map our sort options to TMDB's sort_by parameter
-    let tmdbSortBy = "popularity.desc";
-    switch (sortBy) {
-      case "rating":
-        tmdbSortBy = "vote_average.desc";
-        break;
-      case "newest":
-        tmdbSortBy = "release_date.desc";
-        break;
-      case "popularity":
-      default:
-        tmdbSortBy = "popularity.desc";
-        break;
-    }
-
     const moviesPerPage = 20;
-    let allValidMovies = [];
-    let tmdbPage = initialPagesUsed + (page - 1);
-    let totalTmdbPages = Infinity;
-    const maxPagesToFetch = 5; // Limit to prevent infinite loops
 
-    // Keep fetching until we have enough valid movies for this page
-    while (
-      allValidMovies.length < moviesPerPage &&
-      tmdbPage <= totalTmdbPages &&
-      (tmdbPage - (initialPagesUsed + (page - 1))) < maxPagesToFetch
-    ) {
-      // Build API params
-      const apiParams = {
-        page: tmdbPage,
-        region: "US",
-        sort_by: tmdbSortBy,
-        "primary_release_date.gte": sixMonthsAgo.toISOString().split('T')[0],
-        "primary_release_date.lte": now.toISOString().split('T')[0],
-        with_release_type: "4|5", // Digital and Physical releases
-        ...(genre && { with_genres: genre })
-      };
+    // Parse displayed movie IDs to exclude them
+    const displayedMovieIds = req.query.displayedMovieIds
+      ? req.query.displayedMovieIds.split(',').map(id => parseInt(id))
+      : [];
 
-      const response = await discoverMovies(apiParams);
-      totalTmdbPages = response.total_pages;
+    // Use pagination service for fast response
+    const paginationResult = await moviePaginationService.getReleasesSortedPage(
+      sortBy,
+      page,
+      moviesPerPage,
+      displayedMovieIds,
+      genre
+    );
 
-      // Process movies using shared utility
-      const processedMovies = await processMoviesWithDates(response.results, { type: 'releases' });
-      
-      // Filter movies using shared utility
-      const validMovies = filterMovies(processedMovies, { type: 'releases', genre });
-      
-      allValidMovies = allValidMovies.concat(validMovies);
-      tmdbPage++;
-    }
-
-    // Apply sorting using shared utility (only if not handled by TMDB)
-    const sortedMovies = sortBy !== "popularity" ? sortMovies(allValidMovies, sortBy) : allValidMovies;
-
-    // Take exactly the number of movies we want
-    const pageMovies = sortedMovies.slice(0, moviesPerPage);
-
-    // Determine if there are more pages available
-    const hasMore = tmdbPage <= totalTmdbPages;
+    const pageMovies = paginationResult.movies;
+    const hasMore = paginationResult.hasMore;
 
     // Get user's followed movies for proper follow button rendering
     let followedMovieIds = [];
@@ -99,11 +54,17 @@ router.get("/load-more-releases", dataRetrievalLimiter, async (req, res) => {
       templatePath: 'partials/_results-movie-card'
     });
 
-    // Create standardized response
+    // Create standardized response with pagination metadata
     const responseData = createLoadMoreResponse(pageMovies, html, {
-      hasMore,
+      hasMore: paginationResult.hasMore,
       currentPage: page,
-      moviesPerPage
+      moviesPerPage,
+      totalCount: paginationResult.totalCount,
+      collectionSize: paginationResult.collectionSize,
+      source: paginationResult.source,
+      synchronousExpansion: paginationResult.synchronousExpansion,
+      expansionType: paginationResult.expansionType,
+      displayedMovieIds: displayedMovieIds // Pass actual displayed movie IDs for accurate count
     });
 
     res.json(responseData);
@@ -219,7 +180,10 @@ router.get("/load-more-upcoming", dataRetrievalLimiter, async (req, res) => {
       moviesPerPage,
       totalCount: paginationResult.totalCount,
       collectionSize: paginationResult.collectionSize,
-      source: paginationResult.source
+      source: paginationResult.source,
+      synchronousExpansion: paginationResult.synchronousExpansion,
+      expansionType: paginationResult.expansionType,
+      displayedMovieIds: displayedMovieIds // Pass actual displayed movie IDs for accurate count
     });
 
     res.json(responseData);

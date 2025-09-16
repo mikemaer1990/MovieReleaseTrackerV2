@@ -60,16 +60,36 @@ function createLoadMoreResponse(movies, html, paginationInfo = {}) {
   const {
     hasMore = false,
     currentPage = 1,
-    moviesPerPage = 20
+    moviesPerPage = 20,
+    displayedMovieIds = [],
+    synchronousExpansion = false,
+    expansionType = null,
+    totalCount = null,
+    collectionSize = null,
+    source = null
   } = paginationInfo;
 
-  return {
+  // ACCURATE COUNT: Use actual displayed movies + current batch instead of mathematical calculation
+  const actualTotalLoaded = displayedMovieIds.length + movies.length;
+
+  const response = {
     movies,
     html,
     hasMore,
     currentPage,
-    totalLoaded: (currentPage - 1) * moviesPerPage + movies.length
+    totalLoaded: actualTotalLoaded
   };
+
+  // Always add expansion metadata for frontend debugging and loading indicators
+  response.synchronousExpansion = synchronousExpansion;
+  response.expansionType = expansionType;
+
+  // Add debug metadata when available
+  if (totalCount !== null) response.totalCount = totalCount;
+  if (collectionSize !== null) response.collectionSize = collectionSize;
+  if (source !== null) response.source = source;
+
+  return response;
 }
 
 /**

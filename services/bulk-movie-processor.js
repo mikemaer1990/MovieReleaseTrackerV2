@@ -230,7 +230,8 @@ class BulkMovieProcessor {
 
     // Add context-specific properties for backward compatibility
     if (options.type === 'releases') {
-      processedMovie.hasRecentStreaming = streamingDateMidnight !== null;
+      // Only include movies that have streaming dates AND have already been released for streaming
+      processedMovie.hasRecentStreaming = streamingDateMidnight !== null && streamingDateMidnight <= now;
     }
 
     return processedMovie;
@@ -305,7 +306,8 @@ class BulkMovieProcessor {
 
     // Add context-specific properties for backward compatibility
     if (options.type === 'releases') {
-      processedMovie.hasRecentStreaming = streamingDateMidnight !== null;
+      // Only include movies that have streaming dates AND have already been released for streaming
+      processedMovie.hasRecentStreaming = streamingDateMidnight !== null && streamingDateMidnight <= now;
     }
 
     return processedMovie;

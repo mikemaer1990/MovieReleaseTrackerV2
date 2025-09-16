@@ -61,7 +61,20 @@ async function processMovieWithDates(movie, options = {}) {
 
   // Add context-specific properties for backward compatibility
   if (options.type === 'releases') {
-    processedMovie.hasRecentStreaming = streamingDateMidnight !== null;
+    // Only include movies that have streaming dates AND have already been released for streaming
+    processedMovie.hasRecentStreaming = streamingDateMidnight !== null && streamingDateMidnight <= now;
+
+    // Debug logging for problematic movies
+    const title = movie.title || movie.original_title || 'Unknown';
+    if (title.includes('Toxic Avenger') || title.includes('Primitive War') || title.includes('Swiped') || title.includes('Relay')) {
+      console.log(`DEBUG ${title}:`, {
+        streamingDateRaw,
+        streamingDateMidnight: streamingDateMidnight?.toISOString(),
+        now: now.toISOString(),
+        hasRecentStreaming: processedMovie.hasRecentStreaming,
+        theatricalDate: theatricalDateMidnight?.toISOString()
+      });
+    }
   }
 
   return processedMovie;
@@ -152,16 +165,18 @@ function sortMovies(movies, sortBy = 'popularity') {
 
     case "release_date_asc":
       return moviesCopy.sort((a, b) => {
-        const dateA = new Date(a.release_date || '9999-12-31');
-        const dateB = new Date(b.release_date || '9999-12-31');
+        // Use theatrical date first (most accurate), fallback to release_date, then far future
+        const dateA = a.theatricalDate || new Date(a.release_date || '9999-12-31');
+        const dateB = b.theatricalDate || new Date(b.release_date || '9999-12-31');
         const dateCompare = dateA - dateB;
         return dateCompare !== 0 ? dateCompare : a.id - b.id;
       });
 
     case "release_date_desc":
       return moviesCopy.sort((a, b) => {
-        const dateA = new Date(a.release_date || '1900-01-01');
-        const dateB = new Date(b.release_date || '1900-01-01');
+        // Use theatrical date first (most accurate), fallback to release_date, then distant past
+        const dateA = a.theatricalDate || new Date(a.release_date || '1900-01-01');
+        const dateB = b.theatricalDate || new Date(b.release_date || '1900-01-01');
         const dateCompare = dateB - dateA;
         return dateCompare !== 0 ? dateCompare : a.id - b.id;
       });

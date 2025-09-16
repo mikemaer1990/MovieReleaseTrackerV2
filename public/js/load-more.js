@@ -47,7 +47,7 @@ class LoadMoreManager {
         displayedMovieIds: Array.from(this.displayedMovieIds).join(','),
         ...this.config.params
       });
-      
+
       const response = await fetch(`${this.config.endpoint}?${params}`);
       const data = await response.json();
 
@@ -55,18 +55,34 @@ class LoadMoreManager {
         throw new Error(data.error || 'Failed to load more movies');
       }
 
+      // Update loading state based on expansion type
+      if (data.expansionType) {
+        this.setLoadingStateWithMessage(data.expansionType);
+      }
+
       if (data.html && data.movies && data.movies.length > 0) {
         this.appendMoviesHTML(data.html);
         // Track newly displayed movie IDs
         data.movies.forEach(movie => this.displayedMovieIds.add(movie.id));
         this.currentPage += 1;
-        this.updateMovieCount(data.totalLoaded || (this.currentPage - 1) * 20);
+        this.updateMovieCount(data.totalLoaded);
       }
 
       this.hasMore = data.hasMore;
-      
+
       if (!this.hasMore) {
         this.showNoMoreMovies();
+      }
+
+      // Log expansion debug info if available
+      if (data.synchronousExpansion || data.expansionType) {
+        console.log('Cache expansion info:', {
+          synchronousExpansion: data.synchronousExpansion,
+          expansionType: data.expansionType,
+          moviesReturned: data.movies?.length || 0,
+          totalCount: data.totalCount,
+          source: data.source
+        });
       }
 
     } catch (error) {
@@ -90,6 +106,27 @@ class LoadMoreManager {
       this.loadMoreBtn.disabled = false;
       loadText.style.display = 'block';
       loadSpinner.style.display = 'none';
+      // Reset to default text when done loading
+      loadText.textContent = 'Load More Movies';
+    }
+  }
+
+  setLoadingStateWithMessage(expansionType) {
+    const loadText = this.loadMoreBtn.querySelector('.load-text');
+
+    // Set different loading messages based on expansion type
+    switch (expansionType) {
+      case 'synchronous':
+        loadText.textContent = 'Finding more movies...';
+        break;
+      case 'background':
+        loadText.textContent = 'Expanding collection...';
+        break;
+      case 'cache_insufficient':
+        loadText.textContent = 'Building fresh results...';
+        break;
+      default:
+        loadText.textContent = 'Loading more movies...';
     }
   }
 

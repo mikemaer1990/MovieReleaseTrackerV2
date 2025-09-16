@@ -26,8 +26,8 @@
 </div>
 
 <script>
-  // Pass initial pages used to JavaScript for proper load more pagination
-  window.initialPagesUsed = <%= initialPagesUsed || 3 %>;
+  // Using pagination service - no need to track initial pages
+  window.hasMore = <%= hasMore %>;
 </script>
 <script src="/js/movie-cards.js"></script>
 <script src="/js/load-more.js"></script>
