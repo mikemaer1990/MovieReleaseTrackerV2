@@ -889,12 +889,18 @@ class MoviePaginationService {
         this.sortedCollections.set(cacheKey, expandedMovies);
         this.lastRefresh.set(cacheKey, Date.now());
       } else if (sortBy === 'newest' || cacheKey.includes('releases_')) {
-        // Expand releases cache with incremental building (like upcoming)
+        // Expand releases cache with incremental building (preserving existing cache)
+        const existingMovies = this.sortedCollections.get(cacheKey) || [];
+        expandedMovies = [...existingMovies]; // Start with existing cache to preserve chronological progression
+
+        // Calculate starting page based on existing cache size
+        const startingPage = Math.ceil(existingMovies.length / 20) + 1;
+
         const now = toUtcMidnight(new Date());
         const sixMonthsAgo = new Date(now);
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-        for (let page = 1; page <= newPageCount; page++) {
+        for (let page = startingPage; page <= newPageCount; page++) {
           try {
             const apiParams = {
               page: page,
@@ -912,9 +918,12 @@ class MoviePaginationService {
               const processed = await processMoviesWithDates(response.results, { type: 'releases' });
               const filtered = filterMovies(processed, { type: 'releases', genre });
 
-              // Deduplicate new movies before accumulating to prevent duplicates during expansion
+              // Deduplicate new movies before adding to prevent duplicates during expansion
               const newMovies = deduplicateMovies(filtered, expandedMovies);
               expandedMovies.push(...newMovies);
+
+              // CRITICAL FIX: Sort after each page to maintain chronological order
+              expandedMovies = sortMovies(expandedMovies, 'newest');
 
               if (newMovies.length !== filtered.length) {
                 const duplicateIds = filtered.filter(movie => !newMovies.some(newMovie => newMovie.id === movie.id)).map(movie => movie.id);
@@ -930,9 +939,8 @@ class MoviePaginationService {
           }
         }
 
-        // Sort by newest (release date descending) after expansion
-        const sorted = sortMovies(expandedMovies, 'newest');
-        this.sortedCollections.set(cacheKey, sorted);
+        // Update releases cache with expanded and properly sorted movies
+        this.sortedCollections.set(cacheKey, expandedMovies);
         this.lastRefresh.set(cacheKey, Date.now());
       }
 
