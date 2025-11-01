@@ -37,9 +37,13 @@ class LoadMoreManager {
   }
 
   async loadMore() {
-    if (this.isLoading || !this.hasMore) return;
+    if (this.isLoading || !this.hasMore) {
+      console.log('LoadMore blocked:', { isLoading: this.isLoading, hasMore: this.hasMore });
+      return;
+    }
 
     this.setLoadingState(true);
+    console.log(`Loading page ${this.currentPage} with params:`, this.config.params);
 
     try {
       const params = new URLSearchParams({
@@ -87,9 +91,15 @@ class LoadMoreManager {
 
     } catch (error) {
       console.error('Load more error:', error);
-      this.showError(error.message);
+      this.showError(`Failed to load more movies: ${error.message}`);
+
+      // Enhanced error recovery - don't increment page on failure
+      if (this.currentPage > this.config.initialPage) {
+        console.log('Reverting page increment due to error');
+      }
     } finally {
       this.setLoadingState(false);
+      this.isLoading = false; // Ensure loading state is always cleared
     }
   }
 
@@ -199,17 +209,37 @@ class LoadMoreManager {
   }
 }
 
-// Auto-initialize based on page context
-document.addEventListener('DOMContentLoaded', () => {
+// Auto-initialize based on page context with enhanced reliability
+function initializeLoadMore() {
   const loadMoreBtn = document.getElementById('loadMoreBtn');
   if (!loadMoreBtn) return; // No load more button on this page
+
+  // Prevent double initialization
+  if (window.loadMoreManager) {
+    console.log('LoadMoreManager already initialized');
+    return;
+  }
 
   // Detect page context and configure accordingly
   const pageConfig = getPageConfig();
   if (pageConfig) {
-    new LoadMoreManager(pageConfig);
+    // Store instance globally for debugging and state management
+    window.loadMoreManager = new LoadMoreManager(pageConfig);
+    console.log('LoadMoreManager initialized:', pageConfig);
   }
-});
+}
+
+// Multiple initialization strategies for maximum reliability
+document.addEventListener('DOMContentLoaded', initializeLoadMore);
+
+// Fallback for cases where DOMContentLoaded has already fired
+if (document.readyState === 'loading') {
+  // DOM is still loading
+  document.addEventListener('DOMContentLoaded', initializeLoadMore);
+} else {
+  // DOM has already loaded
+  setTimeout(initializeLoadMore, 0);
+}
 
 /**
  * Determines the page configuration based on current page context
@@ -224,7 +254,6 @@ function getPageConfig() {
       endpoint: '/load-more-releases',
       params: {
         sort: urlParams.get('sort') || 'popularity',
-        genre: urlParams.get('genre') || '',
         initialPagesUsed: window.initialPagesUsed || 3
       }
     };
@@ -246,12 +275,11 @@ function getPageConfig() {
   // Upcoming page
   if (path === '/upcoming') {
     const initialPagesUsed = window.initialPagesUsed || 3;
-    
+
     return {
       endpoint: '/load-more-upcoming',
       params: {
         sort: urlParams.get('sort') || 'popularity',
-        genre: urlParams.get('genre') || '',
         initialPagesUsed: initialPagesUsed
       }
     };

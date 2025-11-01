@@ -30,11 +30,11 @@ class MoviePaginationService {
     this.expansionInProgress = new Map(); // Prevent concurrent expansions
     this.expandedCacheTime = new Map(); // Track when cache was expanded
     this.expansionTTL = 10 * 60 * 1000; // 10 minutes for expanded caches
-    this.maxExpansionLevel = 3; // Maximum expansion cycles (5 → 15 → 25 → 30 pages)
+    this.maxExpansionLevel = 10; // Allow more expansion cycles for unlimited scrolling
 
     // Unified filtering configuration
     this.targetBatchSize = 20; // Standard page size
-    this.targetBatches = 5; // Target 5 batches = 100 movies
+    this.targetBatches = 10; // Target 10 batches = 200 movies for better initial cache
   }
 
   /**
@@ -48,7 +48,6 @@ class MoviePaginationService {
   async applyUnifiedFiltering(rawMovies, options = {}) {
     const {
       type = 'upcoming',
-      genre = null,
       excludeIds = [],
       sortBy = 'popularity'
     } = options;
@@ -57,8 +56,8 @@ class MoviePaginationService {
       // Step 1: Process movies with dates (adds quality scores, formats dates)
       const processed = await processMoviesWithDates(rawMovies, { type });
 
-      // Step 2: Apply genre and type-specific filtering
-      const filtered = filterMovies(processed, { type, genre });
+      // Step 2: Apply type-specific filtering
+      const filtered = filterMovies(processed, { type });
 
       // Step 3: Apply exclusion filter (for already displayed movies)
       const excluded = filtered.filter(movie => {
@@ -87,52 +86,51 @@ class MoviePaginationService {
    * @param {number} page - Page number (1-based)
    * @param {number} pageSize - Number of movies per page
    * @param {Array} excludeIds - Movie IDs to exclude
-   * @param {string} genre - Genre filter
    * @returns {Object} Paginated result with movies, hasMore, etc.
    */
-  async getSortedPage(sortBy, page, pageSize = 20, excludeIds = [], genre = null) {
-    console.log(`getSortedPage: ${sortBy}, page ${page}, genre ${genre || 'all'}`);
+  async getSortedPage(sortBy, page, pageSize = 20, excludeIds = []) {
+    console.log(`getSortedPage: ${sortBy}, page ${page}`);
 
     // HYBRID DECISION: Route to optimized method based on sort type
     if (sortBy === 'popularity') {
-      return await this.getPopularityPageFast(page, pageSize, excludeIds, genre);
+      return await this.getPopularityPageFast(page, pageSize, excludeIds);
     }
 
     if (sortBy.includes('release_date')) {
-      return await this.getDatePageAccurate(sortBy, page, pageSize, excludeIds, genre);
+      return await this.getDatePageAccurate(sortBy, page, pageSize, excludeIds);
     }
 
     // Fallback to original method for other sort types
-    return await this.getSortedPageOriginal(sortBy, page, pageSize, excludeIds, genre);
+    return await this.getSortedPageOriginal(sortBy, page, pageSize, excludeIds);
   }
 
   /**
    * FAST POPULARITY SORTING: Use pre-warmed cache
    */
-  async getPopularityPageFast(page, pageSize, excludeIds = [], genre = null) {
-    const cacheKey = `popularity_${genre || 'all'}`;
+  async getPopularityPageFast(page, pageSize, excludeIds = []) {
+    const cacheKey = `popularity_all`;
 
     // Check if we have fresh cached data
     if (this.isPopularityCacheFresh(cacheKey)) {
       console.log(`Using pre-warmed popularity cache for ${cacheKey}`);
-      const expansionContext = { cacheKey, sortBy: 'popularity', genre };
+      const expansionContext = { cacheKey, sortBy: 'popularity' };
       return await this.getPageFromCache(this.popularityCache.get(cacheKey), page, pageSize, excludeIds, expansionContext);
     }
 
     console.log(`Popularity cache stale/missing for ${cacheKey}, warming now...`);
 
     // Cache miss or stale - warm it quickly (async for next time)
-    this.warmPopularityCache(genre).catch(console.error);
+    this.warmPopularityCache().catch(console.error);
 
     // For immediate response, fetch minimal pages
-    return await this.getQuickPopularityResponse(page, pageSize, excludeIds, genre);
+    return await this.getQuickPopularityResponse(page, pageSize, excludeIds);
   }
 
   /**
    * ACCURATE DATE SORTING: Smart real-time fetch with reduced pages
    */
-  async getDatePageAccurate(sortBy, page, pageSize, excludeIds = [], genre = null) {
-    const cacheKey = `date_${sortBy}_${genre || 'all'}`;
+  async getDatePageAccurate(sortBy, page, pageSize, excludeIds = []) {
+    const cacheKey = `date_${sortBy}_all`;
 
     // Check for recent date cache (shorter TTL for dates)
     const cachedResult = this.sortedCollections.get(cacheKey);
@@ -140,7 +138,7 @@ class MoviePaginationService {
 
     if (cachedResult && cacheAge < (5 * 60 * 1000)) { // 5 minute TTL for dates
       console.log(`Using cached date results for ${cacheKey}`);
-      const expansionContext = { cacheKey, sortBy, genre };
+      const expansionContext = { cacheKey, sortBy };
       return await this.getPageFromCache(cachedResult, page, pageSize, excludeIds, expansionContext);
     }
 
@@ -148,13 +146,13 @@ class MoviePaginationService {
 
     // Fetch more pages for date sorting to ensure 6-month coverage
     const optimizedPages = 25; // Increased from 8 to ensure sufficient movie volume
-    const movies = await this.fetchDateSortedMovies(sortBy, optimizedPages, genre);
+    const movies = await this.fetchDateSortedMovies(sortBy, optimizedPages);
 
     // Cache the results
     this.sortedCollections.set(cacheKey, movies);
     this.lastRefresh.set(cacheKey, Date.now());
 
-    const expansionContext = { cacheKey, sortBy, genre };
+    const expansionContext = { cacheKey, sortBy };
     return await this.getPageFromCache(movies, page, pageSize, excludeIds, expansionContext);
   }
 
@@ -162,52 +160,52 @@ class MoviePaginationService {
    * Get sorted page for streaming releases (top-releases page)
    * Uses the same caching and optimization strategies as upcoming movies
    */
-  async getReleasesSortedPage(sortBy, page, pageSize = 20, excludeIds = [], genre = null) {
-    console.log(`getReleasesSortedPage: ${sortBy}, page ${page}, genre ${genre || 'all'}`);
+  async getReleasesSortedPage(sortBy, page, pageSize = 20, excludeIds = []) {
+    console.log(`getReleasesSortedPage: ${sortBy}, page ${page}`);
 
     // Optimize for popularity sorting with pre-warmed cache
     if (sortBy === 'popularity') {
-      return await this.getReleasesPopularityPage(page, pageSize, excludeIds, genre);
+      return await this.getReleasesPopularityPage(page, pageSize, excludeIds);
     } else {
-      return await this.getReleasesDateSortedPage(sortBy, page, pageSize, excludeIds, genre);
+      return await this.getReleasesDateSortedPage(sortBy, page, pageSize, excludeIds);
     }
   }
 
   /**
    * Fast popularity-based page retrieval for releases (similar to upcoming)
    */
-  async getReleasesPopularityPage(page, pageSize, excludeIds, genre) {
-    const cacheKey = `releases_popularity_${genre || 'all'}`;
+  async getReleasesPopularityPage(page, pageSize, excludeIds) {
+    const cacheKey = `releases_popularity_all`;
 
     // Check if we have pre-warmed cache
     if (this.releasesPopularityCache && this.releasesPopularityCache.has(cacheKey)) {
       console.log(`Using pre-warmed releases popularity cache for ${cacheKey}`);
       const cachedMovies = this.releasesPopularityCache.get(cacheKey);
-      const expansionContext = { cacheKey, sortBy: 'popularity', genre, isReleases: true };
+      const expansionContext = { cacheKey, sortBy: 'popularity', isReleases: true };
       return await this.getPageFromCache(cachedMovies, page, pageSize, excludeIds, expansionContext);
     }
 
     console.log(`Releases popularity cache stale/missing for ${cacheKey}, warming now...`);
 
     // Cache miss or stale - warm it quickly (async for next time)
-    this.warmReleasesPopularityCache(genre).catch(console.error);
+    this.warmReleasesPopularityCache().catch(console.error);
 
     // For immediate response, fetch minimal pages
-    return await this.getQuickReleasesPopularityResponse(page, pageSize, excludeIds, genre);
+    return await this.getQuickReleasesPopularityResponse(page, pageSize, excludeIds);
   }
 
   /**
    * Date-sorted page retrieval for releases
    */
-  async getReleasesDateSortedPage(sortBy, page, pageSize, excludeIds, genre) {
-    const cacheKey = `releases_${sortBy}_${genre || 'all'}`;
+  async getReleasesDateSortedPage(sortBy, page, pageSize, excludeIds) {
+    const cacheKey = `releases_${sortBy}_all`;
 
     // Check if we have cached collection
     if (!this.needsRefresh(cacheKey) && this.sortedCollections.has(cacheKey)) {
       const cachedMovies = this.sortedCollections.get(cacheKey);
       // Re-sort cached movies by the requested sort order since cache contains popularity-sorted movies
       const reSortedMovies = sortMovies(cachedMovies, sortBy);
-      const expansionContext = { cacheKey, sortBy, genre, isReleases: true };
+      const expansionContext = { cacheKey, sortBy, isReleases: true };
       return await this.getPageFromCache(reSortedMovies, page, pageSize, excludeIds, expansionContext);
     }
 
@@ -216,20 +214,20 @@ class MoviePaginationService {
     // For date sorting, use the same movie pool as popularity but sort client-side
     // This ensures consistent movie availability across all sorting options
     const optimizedPages = 25; // Increased from typical 8 pages to ensure good coverage
-    const movies = await this.fetchStreamingReleases('popularity', optimizedPages, genre);
+    const movies = await this.fetchStreamingReleases('popularity', optimizedPages);
 
     // Cache the results
     this.sortedCollections.set(cacheKey, movies);
     this.lastRefresh.set(cacheKey, Date.now());
 
-    const expansionContext = { cacheKey, sortBy, genre, isReleases: true };
+    const expansionContext = { cacheKey, sortBy, isReleases: true };
     return await this.getPageFromCache(movies, page, pageSize, excludeIds, expansionContext);
   }
 
   /**
    * Quick popularity response for releases (when cache isn't warmed)
    */
-  async getQuickReleasesPopularityResponse(page, pageSize, excludeIds, genre) {
+  async getQuickReleasesPopularityResponse(page, pageSize, excludeIds) {
     try {
       // Fetch just 2 pages for immediate response
       const quickPages = 2;
@@ -247,7 +245,6 @@ class MoviePaginationService {
           "primary_release_date.gte": sixMonthsAgo.toISOString().split('T')[0],
           "primary_release_date.lte": now.toISOString().split('T')[0],
           with_release_type: "4|5", // Digital and Physical releases
-          ...(genre && { with_genres: genre })
         };
 
         const response = await discoverMovies(apiParams);
@@ -260,13 +257,12 @@ class MoviePaginationService {
       // Use unified filtering pipeline for consistency
       const filteredMovies = await this.applyUnifiedFiltering(allRawMovies, {
         type: 'releases',
-        genre,
         excludeIds: [], // No exclusions during quick response
         sortBy: 'popularity'
       });
 
       // Provide expansion context for consistent metadata
-      const expansionContext = { cacheKey: `releases_quick_${genre || 'all'}`, sortBy: 'popularity', genre, isReleases: true };
+      const expansionContext = { cacheKey: `releases_quick_all`, sortBy: 'popularity', isReleases: true };
       return await this.getPageFromCache(filteredMovies, page, pageSize, excludeIds, expansionContext);
 
     } catch (error) {
@@ -278,12 +274,12 @@ class MoviePaginationService {
   /**
    * ORIGINAL METHOD: Fallback for other sort types
    */
-  async getSortedPageOriginal(sortBy, page, pageSize, excludeIds, genre) {
-    const collectionKey = `upcoming_${sortBy}_${genre || 'all'}`;
+  async getSortedPageOriginal(sortBy, page, pageSize, excludeIds) {
+    const collectionKey = `upcoming_${sortBy}_all`;
 
     // Ensure collection is available and fresh
     if (this.needsRefresh(collectionKey)) {
-      await this.refreshCollection(collectionKey, sortBy, genre);
+      await this.refreshCollection(collectionKey, sortBy);
     }
 
     const collection = this.sortedCollections.get(collectionKey);
@@ -298,7 +294,7 @@ class MoviePaginationService {
    * Fetch streaming releases with optimized page count
    * Similar to fetchDateSortedMovies but for past 6 months of streaming releases
    */
-  async fetchStreamingReleases(sortBy, maxPages, genre) {
+  async fetchStreamingReleases(sortBy, maxPages) {
     const now = toUtcMidnight(new Date());
     const sixMonthsAgo = new Date(now);
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -327,7 +323,6 @@ class MoviePaginationService {
           "primary_release_date.gte": sixMonthsAgo.toISOString().split('T')[0],
           "primary_release_date.lte": now.toISOString().split('T')[0],
           with_release_type: "4|5", // Digital and Physical releases
-          ...(genre && { with_genres: genre })
         };
 
         const response = await discoverMovies(apiParams);
@@ -348,7 +343,6 @@ class MoviePaginationService {
     // Use unified filtering pipeline for consistency
     return await this.applyUnifiedFiltering(allRawMovies, {
       type: 'releases',
-      genre,
       excludeIds: [], // No exclusions during initial fetch
       sortBy
     });
@@ -383,7 +377,7 @@ class MoviePaginationService {
     let synchronousExpansion = false;
 
     if (expansionContext) {
-      const { cacheKey, sortBy, genre } = expansionContext;
+      const { cacheKey, sortBy } = expansionContext;
 
       // SMART EXPANSION: Check if we need expansion
       if (this.shouldExpandCache(cacheKey, page, pageSize, availableMovies.length)) {
@@ -394,12 +388,12 @@ class MoviePaginationService {
           // Cache insufficient for full page - expand synchronously for immediate UX
           console.log(`Cache insufficient (${availableForThisPage}/${pageSize} movies available) - expanding synchronously for ${cacheKey}`);
 
-          const expansionSuccess = await this.expandCache(cacheKey, sortBy, genre);
+          const expansionSuccess = await this.expandCache(cacheKey, sortBy);
 
           if (expansionSuccess) {
             // Re-fetch movies from expanded cache to get full page
             console.log(`Synchronous expansion completed for ${cacheKey} - refetching from expanded cache`);
-            const expandedMovies = this.getCachedMovies(cacheKey, sortBy, genre);
+            const expandedMovies = this.getCachedMovies(cacheKey, sortBy);
             if (expandedMovies && expandedMovies.length > movies.length) {
               movies = expandedMovies;
               console.log(`Using expanded cache with ${movies.length} movies for ${cacheKey}`);
@@ -411,7 +405,7 @@ class MoviePaginationService {
           // Cache sufficient for this request - expand in background for future requests
           console.log(`Cache sufficient (${availableForThisPage}/${pageSize} movies) - expanding in background for ${cacheKey}`);
 
-          this.expandCache(cacheKey, sortBy, genre).then(success => {
+          this.expandCache(cacheKey, sortBy).then(success => {
             if (success) {
               console.log(`Background expansion completed for ${cacheKey}`);
             }
@@ -462,9 +456,8 @@ class MoviePaginationService {
    * Refresh a movie collection from TMDB API
    * @param {string} collectionKey - Cache key for collection
    * @param {string} sortBy - Sort criteria
-   * @param {string} genre - Genre filter
    */
-  async refreshCollection(collectionKey, sortBy, genre = null) {
+  async refreshCollection(collectionKey, sortBy = null) {
     // Prevent duplicate refresh operations
     if (this.refreshInProgress.get(collectionKey)) {
       console.log(`Collection refresh already in progress: ${collectionKey}`);
@@ -496,7 +489,7 @@ class MoviePaginationService {
           const processed = await processMoviesWithDates(response.results, { type: 'upcoming' });
           
           // Apply filtering
-          const filtered = filterMovies(processed, { type: 'upcoming', genre });
+          const filtered = filterMovies(processed, { type: 'upcoming' });
           
           allMovies.push(...filtered);
           
@@ -600,8 +593,8 @@ class MoviePaginationService {
    * Warm popularity cache with unified filtering and target batches of 20
    * Ensures cache contains exactly the same movies that would be shown at display time
    */
-  async warmPopularityCache(genre = null) {
-    const cacheKey = `popularity_${genre || 'all'}`;
+  async warmPopularityCache() {
+    const cacheKey = `popularity_all`;
     const targetMovies = this.targetBatches * this.targetBatchSize; // 5 * 20 = 100
 
     console.log(`Warming popularity cache for ${cacheKey} (target: ${targetMovies} movies in ${this.targetBatches} batches)...`);
@@ -629,7 +622,6 @@ class MoviePaginationService {
           // Apply unified filtering to all movies collected so far
           filteredMovies = await this.applyUnifiedFiltering(allRawMovies, {
             type: 'upcoming',
-            genre,
             excludeIds: [], // No exclusions during cache warming
             sortBy: 'popularity'
           });
@@ -642,7 +634,7 @@ class MoviePaginationService {
 
         page++;
         // Small delay to be nice to TMDB
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 250));
       }
 
       // Ensure we have complete batches of 20
@@ -663,8 +655,8 @@ class MoviePaginationService {
    * Warm releases popularity cache for instant response
    * Similar to warmPopularityCache but for streaming releases
    */
-  async warmReleasesPopularityCache(genre = null) {
-    const cacheKey = `releases_popularity_${genre || 'all'}`;
+  async warmReleasesPopularityCache() {
+    const cacheKey = `releases_popularity_all`;
     const targetMovies = this.targetBatches * this.targetBatchSize; // 5 * 20 = 100
 
     console.log(`Warming releases popularity cache for ${cacheKey} (target: ${targetMovies} movies in ${this.targetBatches} batches)...`);
@@ -686,7 +678,6 @@ class MoviePaginationService {
           "primary_release_date.gte": sixMonthsAgo.toISOString().split('T')[0],
           "primary_release_date.lte": now.toISOString().split('T')[0],
           with_release_type: "4|5", // Digital and Physical releases
-          ...(genre && { with_genres: genre })
         };
 
         const response = await discoverMovies(apiParams);
@@ -705,7 +696,6 @@ class MoviePaginationService {
         // Apply unified filtering to see how many usable movies we have
         const filteredMovies = await this.applyUnifiedFiltering(allRawMovies, {
           type: 'releases',
-          genre,
           excludeIds: [],
           sortBy: 'popularity'
         });
@@ -727,7 +717,7 @@ class MoviePaginationService {
 
         page++;
         // Rate limiting to respect TMDB API
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 250));
       }
 
     } catch (error) {
@@ -738,7 +728,7 @@ class MoviePaginationService {
   /**
    * Quick popularity response for cache misses
    */
-  async getQuickPopularityResponse(page, pageSize, excludeIds, genre) {
+  async getQuickPopularityResponse(page, pageSize, excludeIds) {
     console.log('Providing quick popularity response while cache warms...');
 
     try {
@@ -764,7 +754,6 @@ class MoviePaginationService {
       // Use unified filtering pipeline for consistency
       const filteredMovies = await this.applyUnifiedFiltering(allRawMovies, {
         type: 'upcoming',
-        genre,
         excludeIds: [], // No exclusions during quick response
         sortBy: 'popularity'
       });
@@ -781,7 +770,7 @@ class MoviePaginationService {
   /**
    * Fetch date-sorted movies with optimized page count
    */
-  async fetchDateSortedMovies(sortBy, maxPages, genre) {
+  async fetchDateSortedMovies(sortBy, maxPages) {
     const allRawMovies = [];
 
     for (let page = 1; page <= maxPages; page++) {
@@ -813,7 +802,6 @@ class MoviePaginationService {
     // Use unified filtering pipeline for consistency
     return await this.applyUnifiedFiltering(allRawMovies, {
       type: 'upcoming',
-      genre,
       excludeIds: [], // No exclusions during initial fetch
       sortBy
     });
@@ -823,10 +811,9 @@ class MoviePaginationService {
    * Progressively expand cache to provide access to more movies
    * @param {string} cacheKey - Cache key to expand
    * @param {string} sortBy - Sort criteria for fetching
-   * @param {string} genre - Genre filter
    * @returns {Promise<boolean>} Whether expansion was successful
    */
-  async expandCache(cacheKey, sortBy, genre = null) {
+  async expandCache(cacheKey, sortBy = null) {
     // Check if expansion is already in progress
     if (this.expansionInProgress.get(cacheKey)) {
       console.log(`Cache expansion already in progress for ${cacheKey}`);
@@ -860,7 +847,7 @@ class MoviePaginationService {
 
           if (response.results && response.results.length > 0) {
             const processed = await processMoviesWithDates(response.results, { type: 'upcoming' });
-            const filtered = filterMovies(processed, { type: 'upcoming', genre });
+            const filtered = filterMovies(processed, { type: 'upcoming' });
 
             // Deduplicate new movies before accumulating to prevent duplicates during expansion
             const newMovies = deduplicateMovies(filtered, expandedMovies);
@@ -873,7 +860,7 @@ class MoviePaginationService {
           }
 
           // Rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 250));
         }
 
         // Update popularity cache (movies are already deduplicated)
@@ -883,7 +870,7 @@ class MoviePaginationService {
 
       } else if (sortBy.includes('release_date')) {
         // Expand date cache
-        expandedMovies = await this.fetchDateSortedMovies(sortBy, newPageCount, genre);
+        expandedMovies = await this.fetchDateSortedMovies(sortBy, newPageCount);
 
         // Update date cache
         this.sortedCollections.set(cacheKey, expandedMovies);
@@ -893,14 +880,25 @@ class MoviePaginationService {
         const existingMovies = this.sortedCollections.get(cacheKey) || [];
         expandedMovies = [...existingMovies]; // Start with existing cache to preserve chronological progression
 
-        // Calculate starting page based on existing cache size
-        const startingPage = Math.ceil(existingMovies.length / 20) + 1;
+        // Handle empty caches
+        let startingPage;
+        let adjustedPageCount = newPageCount;
+
+        if (existingMovies.length === 0) {
+          // Cache is empty - start from page 1 and fetch more pages
+          startingPage = 1;
+          adjustedPageCount = Math.max(newPageCount, 8); // Reduced from 15 to 8 pages to prevent 429s
+          console.log(`Cache ${cacheKey} is empty - starting from page 1, fetching ${adjustedPageCount} pages`);
+        } else {
+          // Existing cache has movies - continue from where we left off
+          startingPage = Math.ceil(existingMovies.length / 20) + 1;
+        }
 
         const now = toUtcMidnight(new Date());
         const sixMonthsAgo = new Date(now);
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-        for (let page = startingPage; page <= newPageCount; page++) {
+        for (let page = startingPage; page <= adjustedPageCount; page++) {
           try {
             const apiParams = {
               page: page,
@@ -909,14 +907,13 @@ class MoviePaginationService {
               "primary_release_date.gte": sixMonthsAgo.toISOString().split('T')[0],
               "primary_release_date.lte": now.toISOString().split('T')[0],
               with_release_type: "4|5", // Digital and Physical releases
-              ...(genre && { with_genres: genre })
-            };
+                };
 
             const response = await discoverMovies(apiParams);
 
             if (response.results && response.results.length > 0) {
               const processed = await processMoviesWithDates(response.results, { type: 'releases' });
-              const filtered = filterMovies(processed, { type: 'releases', genre });
+              const filtered = filterMovies(processed, { type: 'releases' });
 
               // Deduplicate new movies before adding to prevent duplicates during expansion
               const newMovies = deduplicateMovies(filtered, expandedMovies);
@@ -929,10 +926,19 @@ class MoviePaginationService {
                 const duplicateIds = filtered.filter(movie => !newMovies.some(newMovie => newMovie.id === movie.id)).map(movie => movie.id);
                 console.log(`RELEASES EXPANSION DUPLICATE DETECTION: Found ${duplicateIds.length} duplicate movies in page ${page}: [${duplicateIds.join(', ')}]`);
               }
+
+              // Check if we have enough movies early
+              if (existingMovies.length === 0) {
+                const targetMovies = 60; // Target enough movies for 3 complete pages
+                if (expandedMovies.length >= targetMovies) {
+                  console.log(`Cache ${cacheKey} reached target ${targetMovies} movies at page ${page}, stopping early`);
+                  break;
+                }
+              }
             }
 
-            // Rate limiting
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Rate limiting - increased from 100ms to 250ms for better TMDB compliance
+            await new Promise(resolve => setTimeout(resolve, 250));
           } catch (error) {
             console.error(`Error fetching releases expansion page ${page}:`, error);
             // Continue with next page
@@ -1005,10 +1011,9 @@ class MoviePaginationService {
    * Get cached movies for a specific cache key and sort type
    * @param {string} cacheKey - Cache key identifier
    * @param {string} sortBy - Sort criteria
-   * @param {string} genre - Genre filter
    * @returns {Array|null} Cached movies or null if not found
    */
-  getCachedMovies(cacheKey, sortBy, genre) {
+  getCachedMovies(cacheKey, sortBy) {
     // Check popularity caches first
     if (sortBy === 'popularity') {
       return this.popularityCache.get(cacheKey) || null;
@@ -1032,15 +1037,18 @@ class MoviePaginationService {
 
     // PRIORITY 1: Warm popularity caches (fast startup essential)
     try {
-      await this.warmPopularityCache(null); // All genres
+      await this.warmPopularityCache(); // All movies
       console.log('✅ Popularity cache warmed');
     } catch (error) {
       console.error('❌ Failed to warm popularity cache:', error);
     }
 
+    // Add stagger delay to prevent TMDB rate limiting
+    await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second stagger
+
     // PRIORITY 1.5: Warm releases popularity cache (top-releases performance)
     try {
-      await this.warmReleasesPopularityCache(null); // All genres
+      await this.warmReleasesPopularityCache(); // All movies
       console.log('✅ Releases popularity cache warmed');
     } catch (error) {
       console.error('❌ Failed to warm releases popularity cache:', error);
@@ -1048,15 +1056,15 @@ class MoviePaginationService {
 
     // PRIORITY 2: Pre-warm upcoming movies date collections (background)
     const upcomingDateCollections = [
-      { sortBy: 'release_date_asc', genre: null },
-      { sortBy: 'release_date_desc', genre: null }
+      { sortBy: 'release_date_asc' },
+      { sortBy: 'release_date_desc' }
     ];
 
     // Run these in background to avoid blocking startup
     setTimeout(async () => {
-      for (const { sortBy, genre } of upcomingDateCollections) {
+      for (const { sortBy } of upcomingDateCollections) {
         try {
-          await this.fetchDateSortedMovies(sortBy, 15, genre);
+          await this.fetchDateSortedMovies(sortBy, 15);
           console.log(`✅ Pre-warmed upcoming ${sortBy} collection`);
         } catch (error) {
           console.error(`❌ Failed to pre-warm upcoming ${sortBy}:`, error);
@@ -1068,7 +1076,7 @@ class MoviePaginationService {
     setTimeout(async () => {
       try {
         // Pre-warm releases newest collection using same movie pool as popularity
-        const newestMovies = await this.fetchStreamingReleases('popularity', 25, null);
+        const newestMovies = await this.fetchStreamingReleases('popularity', 25);
         this.sortedCollections.set('releases_newest_all', newestMovies);
         this.lastRefresh.set('releases_newest_all', Date.now());
         console.log('✅ Pre-warmed releases newest collection');

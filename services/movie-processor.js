@@ -111,7 +111,7 @@ async function processMoviesWithDates(movies, options = {}) {
  * @returns {Array} Filtered movies
  */
 function filterMovies(movies, filterOptions = {}) {
-  const { type, genre, minVoteCount, maxRating } = filterOptions;
+  const { type, minVoteCount, maxRating } = filterOptions;
 
   let filtered = movies;
 
@@ -123,13 +123,6 @@ function filterMovies(movies, filterOptions = {}) {
   }
   // For search results, don't filter by canFollow - show all results
   // The canFollow property is still set correctly for the follow buttons
-
-  // Apply genre filtering if specified
-  if (genre) {
-    filtered = filtered.filter(movie => 
-      movie.genre_ids && movie.genre_ids.includes(parseInt(genre))
-    );
-  }
 
   // Apply minimum vote count filtering if specified (for rating-based sorting)
   if (minVoteCount && typeof minVoteCount === 'number') {

@@ -115,6 +115,9 @@ This is a Node.js/Express.js movie release tracking web application with the fol
 │   ├── tmdb.js                # TMDB API integration
 │   ├── cache.js               # NodeCache wrapper
 │   ├── movie-processor.js     # Movie data processing and filtering
+│   ├── movie-pagination.js    # Advanced pagination with caching
+│   ├── movie-metadata-cache.js # Movie metadata caching service
+│   ├── bulk-movie-processor.js # Batch processing for API efficiency
 │   ├── send-email.js          # Email notification service
 │   └── email-templates.js     # Email template generation
 ├── utils/                      # Utility functions
@@ -163,10 +166,36 @@ This is a Node.js/Express.js movie release tracking web application with the fol
   - `sortMovies()` - Sort movies by popularity, rating, or release date
   - `deduplicateMovies()` - Remove duplicate movies from arrays
 
+### Movie Pagination Service (`services/movie-pagination.js`)
+
+- **Purpose**: Advanced pagination system with intelligent caching and cache expansion
+- **Architecture**: Hybrid approach routing requests based on sort type for optimal performance
+- **Cache Types**: Multiple specialized caches (popularity, date-sorted, releases)
+- **Key Features**:
+  - Proactive cache warming on startup
+  - Dynamic cache expansion with background pre-loading
+  - Deduplication and memory management
+  - TMDB API rate limiting compliance
+  - Support for unlimited scrolling with expansion levels
+
+### Movie Metadata Cache Service (`services/movie-metadata-cache.js`)
+
+- **Purpose**: Lightweight caching for frequently accessed movie data
+- **Size Limit**: 1000 movies in memory with LRU eviction
+- **TTL**: 1 hour persistent, 30 minutes memory
+- **Features**: Access tracking, automatic cleanup, batch processing integration
+
+### Bulk Movie Processor Service (`services/bulk-movie-processor.js`)
+
+- **Purpose**: Batch processing to reduce TMDB API calls
+- **Batch Size**: 20 movies per batch
+- **Concurrency**: 5 concurrent requests
+- **Integration**: Works with metadata cache for optimization
+
 ### Cache Service (`services/cache.js`)
 
 - **Implementation**: NodeCache with 10-minute default TTL
-- **Usage**: Primarily used to cache Airtable API responses for performance
+- **Usage**: Foundation cache service for Airtable responses and general caching
 - **Pattern**: Cache-aside with explicit cache invalidation on data mutations
 
 ### Email Service (`services/send-email.js`)
@@ -247,12 +276,41 @@ CRON_SECRET=your-cron-secret                # Secret for cron job endpoints
 - StreamingReleaseDate (Date, for streaming follows)
 - StreamingDateAvailable (Checkbox)
 
-## Caching Strategy
+## Advanced Pagination & Caching System
 
-- **Cache Key Pattern**: `followedMovies_${userId}`
+The application implements a sophisticated **hybrid pagination and caching system** designed for optimal performance with large datasets. For detailed technical documentation, see `current_caching_config.md`.
+
+### Key Features
+- **Multi-tier Caching**: Specialized caches for different data types (popularity, date-sorted, releases)
+- **Proactive Cache Warming**: Startup cache warming ensures instant response times
+- **Dynamic Expansion**: Background cache expansion for unlimited scrolling
+- **Intelligent Routing**: Different strategies based on sort type for optimal performance
+- **TMDB API Optimization**: Rate limiting compliance with efficient batch processing
+
+### Frontend Pagination (`public/js/load-more.js`)
+- **Unified System**: Single LoadMoreManager handles all pages (upcoming, top-releases, search)
+- **Auto-detection**: Automatically detects page context and configures endpoints
+- **State Management**: Tracks displayed movies to prevent duplicates
+- **Visual Feedback**: Loading states with contextual messages based on cache expansion type
+
+### Backend Pagination (`services/movie-pagination.js`)
+- **Hybrid Architecture**: Routes requests based on sort type for optimal performance
+- **Cache Expansion**: Supports up to 10 expansion levels for unlimited scrolling
+- **Memory Management**: Automatic cleanup of stale collections
+- **Target-based Warming**: Configurable cache sizes (currently 200 movies initial)
+
+### Cache Configuration
+- **Movies Per Page**: 20 (consistent across all endpoints)
+- **Initial Cache Size**: 200 movies (10 batches)
+- **Cache TTL**: 30 minutes (popularity), 5 minutes (dates), 10 minutes (general)
+- **Expansion Levels**: Up to 10 levels for unlimited scrolling
+- **API Rate Limiting**: 250ms delays between TMDB API calls
+
+### Legacy Caching Strategy
+- **User Data Cache Key**: `followedMovies_${userId}`
 - **TTL**: 600 seconds (10 minutes)
 - **Invalidation**: Explicit cache clearing on follow/unfollow operations
-- **Location**: All caching logic centralized in `services/cache.js`
+- **Location**: User-specific caching in `services/cache.js`
 
 ## API Endpoints Reference
 

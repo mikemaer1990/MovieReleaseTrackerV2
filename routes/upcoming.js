@@ -1,24 +1,21 @@
 const express = require("express");
 const router = express.Router();
 const { getFollowedMoviesByUserId } = require("../services/airtable");
-const { getGenres } = require("../services/tmdb");
 const moviePaginationService = require("../services/movie-pagination");
 router.get("/upcoming", async (req, res) => {
   const followMessage = req.query.followMessage || null;
   const sortBy = req.query.sort || "popularity";
-  const genre = req.query.genre || null;
   const moviesPerPage = 20;
 
   try {
-    console.log(`[UPCOMING] Request: sort=${sortBy}, genre=${genre}`);
+    console.log(`[UPCOMING] Request: sort=${sortBy}`);
 
     // HYBRID PAGINATION SERVICE - handles all optimization logic internally
     const paginationResult = await moviePaginationService.getSortedPage(
       sortBy,
       1, // First page
       moviesPerPage,
-      [], // No excluded IDs on initial load
-      genre
+      [] // No excluded IDs on initial load
     );
 
     const pageMovies = paginationResult.movies;
@@ -44,10 +41,6 @@ router.get("/upcoming", async (req, res) => {
       );
     }
 
-    // Get genres for filter dropdown using centralized service
-    const genresResponse = await getGenres();
-    const genres = genresResponse.genres || [];
-
     res.locals.page = "upcoming";
     res.render("upcoming", {
       title: "Upcoming Movies - Movie Tracker",
@@ -56,8 +49,6 @@ router.get("/upcoming", async (req, res) => {
       followedMovieIds,
       followMessage,
       sortBy,
-      genre,
-      genres,
       query: "",
       loginRedirect: "/upcoming",
       initialLoad: true,

@@ -15,6 +15,43 @@ const tmdbAxios = axios.create({
 });
 
 /**
+ * Retry wrapper with exponential backoff for 429 rate limiting
+ * @param {Function} apiCall - The API call function to retry
+ * @param {number} maxRetries - Maximum number of retries (default: 3)
+ * @param {number} baseDelay - Base delay in milliseconds (default: 1000)
+ */
+async function withRetry(apiCall, maxRetries = 3, baseDelay = 1000) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await apiCall();
+    } catch (error) {
+      lastError = error;
+
+      // Check if it's a 429 rate limit error
+      if (error.response?.status === 429 && attempt < maxRetries) {
+        // Extract retry-after header if available, otherwise use exponential backoff
+        const retryAfter = error.response.headers['retry-after'];
+        const delay = retryAfter
+          ? parseInt(retryAfter) * 1000 // Convert seconds to milliseconds
+          : baseDelay * Math.pow(2, attempt); // Exponential backoff: 1s, 2s, 4s
+
+        console.warn(`[TMDB RETRY] Rate limited (429), retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // For non-429 errors or max retries reached, throw immediately
+      throw error;
+    }
+  }
+
+  // This should never be reached, but just in case
+  throw lastError;
+}
+
+/**
  * Get unified release data for a movie (theatrical, streaming, primary dates)
  * Single API call to fetch all release date information efficiently
  */
@@ -99,12 +136,16 @@ async function getMovieDetails(movieId, appendToResponse = "") {
   if (cached) return cached;
 
   try {
-    const params = {};
-    if (appendToResponse) params.append_to_response = appendToResponse;
+    const result = await withRetry(async () => {
+      const params = {};
+      if (appendToResponse) params.append_to_response = appendToResponse;
 
-    const response = await tmdbAxios.get(`/movie/${movieId}`, { params });
-    setCachedData(cacheKey, response.data, 3600); // Cache for 1 hour
-    return response.data;
+      const response = await tmdbAxios.get(`/movie/${movieId}`, { params });
+      return response.data;
+    });
+
+    setCachedData(cacheKey, result, 3600); // Cache for 1 hour
+    return result;
   } catch (error) {
     console.error(`Error fetching movie details for ${movieId}:`, error);
     throw error;
@@ -213,34 +254,20 @@ async function getExtendedUpcomingMovies(page = 1, region = "US", sortBy = "popu
 
 /**
  * Discover movies with filters
+ * Now includes automatic retry logic for rate limiting (429)
  */
 async function discoverMovies(options = {}) {
   try {
-    const response = await tmdbAxios.get(`/discover/movie`, { params: options });
-    return response.data;
+    return await withRetry(async () => {
+      const response = await tmdbAxios.get(`/discover/movie`, { params: options });
+      return response.data;
+    });
   } catch (error) {
     console.error("Error discovering movies:", error);
     throw error;
   }
 }
 
-/**
- * Get movie genres list
- */
-async function getGenres() {
-  const cacheKey = "movie_genres";
-  const cached = getCachedData(cacheKey);
-  if (cached) return cached;
-
-  try {
-    const response = await tmdbAxios.get(`/genre/movie/list`);
-    setCachedData(cacheKey, response.data, 86400); // Cache for 24 hours
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching genres:", error);
-    throw error;
-  }
-}
 
 module.exports = {
   getReleaseData,
@@ -250,6 +277,5 @@ module.exports = {
   getUpcomingMovies,
   getExtendedUpcomingMovies,
   discoverMovies,
-  getGenres,
   tmdbAxios // Export for any custom needs
 };

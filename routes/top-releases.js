@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { processMoviesWithDates, filterMovies, sortMovies } = require("../services/movie-processor");
-const { discoverMovies, getGenres } = require("../services/tmdb");
+const { discoverMovies } = require("../services/tmdb");
 const { toUtcMidnight } = require("../utils/date-helpers");
 const moviePaginationService = require("../services/movie-pagination");
 
@@ -10,7 +10,6 @@ const RESULTS_PER_PAGE = 20; // Consistent results per page
 router.get("/top-releases", async (req, res) => {
   const followMessage = req.query.followMessage || null;
   const sortBy = req.query.sort || "popularity";
-  const genre = req.query.genre || null;
 
   try {
     // Use pagination service for fast, cached response
@@ -18,8 +17,7 @@ router.get("/top-releases", async (req, res) => {
       sortBy,
       1, // First page
       RESULTS_PER_PAGE,
-      [], // No displayed movie IDs to exclude
-      genre
+      [] // No displayed movie IDs to exclude
     );
 
     const initialMovies = paginationResult.movies;
@@ -34,10 +32,6 @@ router.get("/top-releases", async (req, res) => {
       };
     }
 
-    // Get genres for filter dropdown using centralized service
-    const genresResponse = await getGenres();
-    const genres = genresResponse.genres || [];
-
     res.locals.page = "top-releases";
     res.render("top-releases", {
       title: "Top Streaming Releases - Movie Tracker",
@@ -45,8 +39,6 @@ router.get("/top-releases", async (req, res) => {
       user,
       followMessage,
       sortBy,
-      genre,
-      genres,
       initialLoad: true, // Flag to indicate this is initial load
       hasMore: paginationResult.hasMore, // Use pagination service metadata
       sortOptions: [

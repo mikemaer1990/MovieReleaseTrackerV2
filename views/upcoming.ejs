@@ -10,13 +10,11 @@
     </div>
   <% } %>
 
-  <%- include('partials/_page-controls', { 
+  <%- include('partials/_page-controls', {
     showControls: true,
     actionUrl: '/upcoming',
     sortOptions,
-    sortBy,
-    genres,
-    genre
+    sortBy
   }) %>
 
   <%- include('partials/_page-content', { 
@@ -37,4 +35,4 @@
 </script>
 <script src="/js/movie-cards.js"></script>
 <script src="/js/load-more.js"></script>
-<script src="/js/custom-dropdown.js"></script>
+<script src="/js/sort-controls.js"></script>

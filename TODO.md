@@ -1,5 +1,12 @@
 # TODO: Active Tasks
 
+## 🎯 CURRENT PRIORITY
+
+### Navbar Overlap Fix
+- [ ] Fix navbar overlap - make nav links shift left naturally with flexbox instead of rigid grid
+- **Issue**: Searchbar overlaps center nav links at ~1150px screen width
+- **Solution**: Replace CSS Grid with flexbox to allow natural left shift when space is tight
+
 ## ✅ RECENT FIXES (2025-09-14)
 
 ### 🚀 Cache Expansion & Loading Indicators (COMPLETED)

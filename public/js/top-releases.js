@@ -9,13 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const sortSelect = form.querySelector("#sort");
-  const genreSelect = form.querySelector("#genre");
 
   if (sortSelect) {
     sortSelect.addEventListener("change", () => form.submit());
-  }
-
-  if (genreSelect) {
-    genreSelect.addEventListener("change", () => form.submit());
   }
 });

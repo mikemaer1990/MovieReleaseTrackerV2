@@ -14,7 +14,6 @@ router.get("/load-more-releases", dataRetrievalLimiter, async (req, res) => {
 
     const page = parseInt(req.query.page) || 2;
     const sortBy = req.query.sort || "popularity";
-    const genre = req.query.genre || null;
     const moviesPerPage = 20;
 
     // Parse displayed movie IDs to exclude them
@@ -27,8 +26,7 @@ router.get("/load-more-releases", dataRetrievalLimiter, async (req, res) => {
       sortBy,
       page,
       moviesPerPage,
-      displayedMovieIds,
-      genre
+      displayedMovieIds
     );
 
     const pageMovies = paginationResult.movies;
@@ -70,6 +68,19 @@ router.get("/load-more-releases", dataRetrievalLimiter, async (req, res) => {
     res.json(responseData);
 
   } catch (error) {
+    // Handle 429 rate limit errors gracefully
+    if (error.response?.status === 429) {
+      const retryAfter = error.response.headers['retry-after'] || 60;
+      return res.status(429).json({
+        success: false,
+        message: 'Too many requests to movie database. Please try again in a moment.',
+        retryAfter: parseInt(retryAfter),
+        rateLimited: true,
+        movies: [],
+        hasMore: true // Assume there are more movies to encourage retry
+      });
+    }
+
     const errorResponse = createErrorResponse("Failed to load more movies", error);
     res.status(500).json(errorResponse);
   }
@@ -124,6 +135,19 @@ router.get("/load-more-search", dataRetrievalLimiter, async (req, res) => {
     res.json(responseData);
 
   } catch (error) {
+    // Handle 429 rate limit errors gracefully
+    if (error.response?.status === 429) {
+      const retryAfter = error.response.headers['retry-after'] || 60;
+      return res.status(429).json({
+        success: false,
+        message: 'Too many requests to movie database. Please try again in a moment.',
+        retryAfter: parseInt(retryAfter),
+        rateLimited: true,
+        movies: [],
+        hasMore: true // Assume there are more movies to encourage retry
+      });
+    }
+
     const errorResponse = createErrorResponse("Failed to load more search results", error);
     res.status(500).json(errorResponse);
   }
@@ -133,24 +157,22 @@ router.get("/load-more-search", dataRetrievalLimiter, async (req, res) => {
 router.get("/load-more-upcoming", dataRetrievalLimiter, async (req, res) => {
   try {
     const moviePaginationService = require("../../services/movie-pagination");
-    
+
     const page = parseInt(req.query.page) || 2;
     const sortBy = req.query.sort || "popularity";
-    const genre = req.query.genre || null;
     const moviesPerPage = 20;
-    
+
     // Parse displayed movie IDs to exclude them
-    const displayedMovieIds = req.query.displayedMovieIds 
+    const displayedMovieIds = req.query.displayedMovieIds
       ? req.query.displayedMovieIds.split(',').map(id => parseInt(id))
       : [];
-    
+
     // Use pagination service for fast response
     const paginationResult = await moviePaginationService.getSortedPage(
-      sortBy, 
-      page, 
-      moviesPerPage, 
-      displayedMovieIds, 
-      genre
+      sortBy,
+      page,
+      moviesPerPage,
+      displayedMovieIds
     );
 
     // Get user's followed movies for proper follow button rendering
@@ -190,13 +212,25 @@ router.get("/load-more-upcoming", dataRetrievalLimiter, async (req, res) => {
 
   } catch (error) {
     console.error('Load-more upcoming error:', error);
-    
+
+    // Handle 429 rate limit errors gracefully before fallback
+    if (error.response?.status === 429) {
+      const retryAfter = error.response.headers['retry-after'] || 60;
+      return res.status(429).json({
+        success: false,
+        message: 'Too many requests to movie database. Please try again in a moment.',
+        retryAfter: parseInt(retryAfter),
+        rateLimited: true,
+        movies: [],
+        hasMore: true // Assume there are more movies to encourage retry
+      });
+    }
+
     // Fallback to original implementation
     // Use the original load-more logic inline
     const page = parseInt(req.query.page) || 2;
     const initialPagesUsed = parseInt(req.query.initialPagesUsed) || 3;
     const sortBy = req.query.sort || "popularity";
-    const genre = req.query.genre || null;
     const moviesPerPage = 20;
     
     let pageMovies = [];
@@ -226,7 +260,7 @@ router.get("/load-more-upcoming", dataRetrievalLimiter, async (req, res) => {
             if (!results || results.length === 0) break;
             
             const processedMovies = await processMoviesWithDates(results, { type: 'upcoming' });
-            const filteredMovies = filterMovies(processedMovies, { type: 'upcoming', genre });
+            const filteredMovies = filterMovies(processedMovies, { type: 'upcoming' });
             const newFilteredMovies = deduplicateMovies(filteredMovies, collectedMovies);
             collectedMovies.push(...newFilteredMovies);
             
@@ -264,7 +298,7 @@ router.get("/load-more-upcoming", dataRetrievalLimiter, async (req, res) => {
           totalTmdbPages = response.total_pages;
 
           const processedMovies = await processMoviesWithDates(response.results, { type: 'upcoming' });
-          const filteredMovies = filterMovies(processedMovies, { type: 'upcoming', genre });
+          const filteredMovies = filterMovies(processedMovies, { type: 'upcoming' });
           const deduplicatedFromCollection = deduplicateMovies(filteredMovies, collectedMovies);
           const newMovies = deduplicatedFromCollection.filter(movie => !displayedMovieIds.includes(movie.id));
 
@@ -307,6 +341,20 @@ router.get("/load-more-upcoming", dataRetrievalLimiter, async (req, res) => {
 
     } catch (fallbackError) {
       console.error('Fallback also failed:', fallbackError);
+
+      // Handle 429 rate limit errors gracefully
+      if (fallbackError.response?.status === 429) {
+        const retryAfter = fallbackError.response.headers['retry-after'] || 60;
+        return res.status(429).json({
+          success: false,
+          message: 'Too many requests to movie database. Please try again in a moment.',
+          retryAfter: parseInt(retryAfter),
+          rateLimited: true,
+          movies: [],
+          hasMore: true // Assume there are more movies to encourage retry
+        });
+      }
+
       const errorResponse = createErrorResponse("Failed to load more upcoming movies", fallbackError);
       res.status(500).json(errorResponse);
     }

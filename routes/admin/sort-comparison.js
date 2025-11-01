@@ -25,7 +25,6 @@ router.use((req, res, next) => {
  */
 router.get('/sort-comparison', async (req, res) => {
   const sortBy = req.query.sort || 'popularity';
-  const genre = req.query.genre || null;
   const pageCount = parseInt(req.query.pages) || 5;
   const testPages = parseInt(req.query.testPages) || 30;
 
@@ -37,7 +36,6 @@ router.get('/sort-comparison', async (req, res) => {
 
     const results = {
       sortBy,
-      genre,
       pageCount,
       testPages,
       optimizedMethod: null,
@@ -49,7 +47,7 @@ router.get('/sort-comparison', async (req, res) => {
 
     // Method 1: Optimized approach (limited pages)
     const optimizedPerf = await sortTester.measurePerformance(async () => {
-      return await getOptimizedResults(sortBy, pageCount, genre);
+      return await getOptimizedResults(sortBy, pageCount);
     }, `Optimized Method (${pageCount} pages)`);
 
     results.optimizedMethod = {
@@ -62,7 +60,7 @@ router.get('/sort-comparison', async (req, res) => {
 
     // Method 2: Original approach (full pages)
     const originalPerf = await sortTester.measurePerformance(async () => {
-      return await getOriginalResults(sortBy, testPages, genre);
+      return await getOriginalResults(sortBy, testPages);
     }, `Original Method (${testPages} pages)`);
 
     results.originalMethod = {
@@ -284,14 +282,14 @@ router.get('/sort-comparison/ui', (req, res) => {
 /**
  * Get optimized results (limited pages)
  */
-async function getOptimizedResults(sortBy, pageCount, genre) {
+async function getOptimizedResults(sortBy, pageCount) {
   const movies = [];
 
   for (let page = 1; page <= pageCount; page++) {
     const response = await getExtendedUpcomingMovies(page, "US", sortBy);
     if (response.results && response.results.length > 0) {
       const processed = await processMoviesWithDates(response.results, { type: 'upcoming' });
-      const filtered = filterMovies(processed, { type: 'upcoming', genre });
+      const filtered = filterMovies(processed, { type: 'upcoming' });
       movies.push(...filtered);
     }
 
@@ -306,14 +304,14 @@ async function getOptimizedResults(sortBy, pageCount, genre) {
 /**
  * Get original results (full pages)
  */
-async function getOriginalResults(sortBy, pageCount, genre) {
+async function getOriginalResults(sortBy, pageCount) {
   const movies = [];
 
   for (let page = 1; page <= pageCount; page++) {
     const response = await getExtendedUpcomingMovies(page, "US", sortBy);
     if (response.results && response.results.length > 0) {
       const processed = await processMoviesWithDates(response.results, { type: 'upcoming' });
-      const filtered = filterMovies(processed, { type: 'upcoming', genre });
+      const filtered = filterMovies(processed, { type: 'upcoming' });
       movies.push(...filtered);
     }
 
